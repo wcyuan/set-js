@@ -41,7 +41,12 @@ var set = {
         self.num_cards = Math.pow(self.NUM_VALUES, self.NUM_ATTRS);
         self.images = self.load_images();
         self.cards = self.make_deck(self.num_cards);
+        // shown is a list of the cards to be shown.  The index is which place
+        // on the screen it will be and the value is the number of the
+        // card to show
         self.shown = [];
+        // selected is a list of the cards selected.  The index is the number of
+        // the card, the value is a boolean, true/false whether it is selected
         self.selected = [];
         self.found = [];
         self.current_sets = [];
@@ -91,6 +96,43 @@ var set = {
         return cards.init();
     },
 
+    repeat: function(elt, n_times) {
+        var arr = [];
+        for (var ii = 0; ii < n_times; ii++) {
+            arr.push(elt);
+        }
+        return arr;
+    },
+
+    is_set: function(cards) {
+        if (cards.length != this.NUM_VALUES) {
+            return false;
+        }
+        for (var ii = 0, mask = 1; ii < this.NUM_ATTRS; ii++, mask *= this.NUM_VALUES) {
+            var allsame = true;
+            var alldifferent = true;
+            var vals = [];
+            var possibles = this.repeat(false, this.NUM_VALUES);
+            for (var jj = 0; jj < this.NUM_VALUES; jj++) {
+                vals[jj] = (cards[jj] % (mask * this.NUM_VALUES)) / mask;
+                if (possibles[vals[jj]]) {
+                    alldifferent = false;
+                }
+                possibles[vals[jj]] = true;
+                if (jj > 0 && vals[jj] != vals[0]) {
+                    allsame = false;
+                }
+            }
+            if (!allsame && !alldifferent) {
+                return false;
+            }
+        }
+        return true;
+    },
+
+    check_set: function() {
+    },
+
     // Drawing Functions --------------------------------------------
 
     load_images: function() {
@@ -132,6 +174,7 @@ var set = {
             tr.appendChild(td);
             img = document.createElement("IMG");
             td.appendChild(img);
+            td.attributes["pic_id"] = arr[ii];
             img.src = this.images[arr[ii]].src;
             if (onclick) {
                 this.addEventListener(img, "click", onclick);
@@ -153,7 +196,23 @@ var set = {
     },
 
     draw: function() {
-        this.draw_table("card-table", this.shown);
+        var self = this;
+        function select_card(evt) {
+            var obj = evt.target.parentNode;
+            var cls = obj.className;
+            if (cls == "selected") {
+                obj.className = "";
+                // XXX not sure what the problem is with my CSS
+                obj.style.backgroundColor = "";
+                self.selected[obj.attributes["pic_id"]] = false;
+            } else {
+                obj.className = "selected";
+                obj.style.backgroundColor = "yellow";
+                self.selected[obj.attributes["pic_id"]] = true;
+            }
+        }
+        this.check_set();
+        this.draw_table("card-table", this.shown, select_card);
     },
 };
 
