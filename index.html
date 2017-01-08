@@ -1,0 +1,31 @@
+<html> 
+    <head> 
+        <meta name=viewport content="width=device-width, initial-scale=1">
+    </head>
+<body>
+
+<textarea id="messages" readOnly=true></textarea>
+
+<form action="javascript:void(0);">
+    <input id="new-game" type="button" value="New Game">
+    <input id="find-all" type="button" value="Find All">
+    <input id="num-sets" type="button" value="# Sets">
+
+    <input id="show-past-sets" type="button" value="Show Past Sets">
+    <input id="show-sets" type="button" value="Show Sets">
+</form>
+
+<table id="card-table">
+</table>
+
+<div id="past-sets-div" style="display: none">
+	<table id="past-sets-table"></table>
+</div>
+
+<div id="curent-sets-div" style="display: none">
+	<table id="current-sets-table"></table>
+</div>
+
+<script type="text/javascript" src="set.js"></script>
+</body>
+</html>
