@@ -55,6 +55,7 @@ var set = {
         for (var ii = 0; ii < self.NUM_INITIAL_CARDS; ii++) {
             self.shown.push(self.cards.get_next_card());
         }
+        self.setup();
         self.draw();
         return self;
     },
@@ -183,16 +184,23 @@ var set = {
     },
 
     set_toggle_display: function(button_id, div_id) {
-       var button = document.getElementById(button_id);
-       this.addEventListener(button, "click", function() {
-           var div_elt = document.getElementById(div_id);
-           var display = div_elt.style.display;
-           if (display == "none") {
-               div_elt.style.display = "inline";
-           } else {
-               div_elt.style.display = "none";
-           }
-       });
+        var button = document.getElementById(button_id);
+        this.addEventListener(button, "click", function() {
+            var div_elt = document.getElementById(div_id);
+            var display = div_elt.style.display;
+            if (display == "none") {
+                div_elt.style.display = "inline";
+            } else {
+                div_elt.style.display = "none";
+            }
+        });
+        return this;
+    },
+
+    setup: function() {
+        this.set_toggle_display("show-past-sets", "past-sets-div");
+        this.set_toggle_display("show-sets", "current-sets-div");
+        return this;
     },
 
     draw: function() {
@@ -213,6 +221,8 @@ var set = {
         }
         this.check_set();
         this.draw_table("card-table", this.shown, select_card);
+        this.draw_table("show-past-sets", this.found);
+        this.draw_table("show-sets", this.current_sets);
     },
 };
 
