@@ -13,6 +13,13 @@
 //
 
 var set = {
+
+    main: function() {
+        this.current = set.create();
+    },
+
+    // Game Play Functions ------------------------------------------
+
     create: function() {
         var self = Object.create(this);
         // Every card has 4 attributes
@@ -34,20 +41,11 @@ var set = {
         self.current_sets = [];
         self.is_find_all_mode = false;
         self.is_show_num_sets_mode = false;            
-        return self;
-    },
-
-    main: function() {
-        this.current = set.create();
-    },
-
-    load_images: function() {
-        var images = [];
-        for (var ii = 0; ii < this.num_cards; ii++) {
-            images.push(new Image());
-            images[ii].src = "pics/" + (ii+1) + ".gif";
+        for (var ii = 0; ii < self.NUM_INITIAL_CARDS; ii++) {
+            self.shown.push(self.cards.get_next_card());
         }
-        return images;
+        self.draw();
+        return self;
     },
 
     make_deck: function(num_cards) {
@@ -87,6 +85,29 @@ var set = {
         return cards.init();
     },
 
+    // Drawing Functions --------------------------------------------
+
+    load_images: function() {
+        var images = [];
+        for (var ii = 0; ii < this.num_cards; ii++) {
+            images.push(new Image());
+            images[ii].src = "pics/" + (ii+1) + ".gif";
+        }
+        return images;
+    },
+
+    addEventListener: function(el, type, fn) { 
+        if (el.addEventListener) { 
+            el.addEventListener(type, fn, false); 
+            return true; 
+        } else if (el.attachEvent) { 
+            var r = el.attachEvent("on" + type, fn); 
+            return r; 
+        } else { 
+            return false; 
+        } 
+    },
+
     draw_table: function(id, arr, onclick) {
         var table = document.getElementById(id);
         function remove_children(node) {
@@ -97,11 +118,7 @@ var set = {
         remove_children(table);
         var tr;
         for (var ii = 0; ii < arr.length; ii++) {
-            console.log(ii);
-            console.log(this);
-            console.log(this.NUM_CARDS_PER_ROW);
             if (ii % this.NUM_CARDS_PER_ROW == 0) {
-                console.log(ii);
                 tr = document.createElement("TR");
                 table.appendChild(tr);
             }
@@ -110,7 +127,28 @@ var set = {
             img = document.createElement("IMG");
             td.appendChild(img);
             img.src = this.images[arr[ii]].src;
+            
+            if (onclick) {
+                this.addEventListener(img, "click", onclick);
+            }
         }
+    },
+
+    set_toggle_display: function(button_id, div_id) {
+       var button = document.getElementById(button_id);
+       this.addEventListener(button, "click", function() {
+           var div_elt = document.getElementById(div_id);
+           var display = div_elt.style.display;
+           if (display == "none") {
+               div_elt.style.display = "inline";
+           } else {
+               div_elt.style.display = "none";
+           }
+       });
+    },
+
+    draw: function() {
+        this.draw_table("card-table", this.shown);
     },
 };
 
