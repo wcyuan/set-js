@@ -13,27 +13,32 @@
 //
 
 var set = {
-    // Every card has 4 attributes
-    NUM_ATTRS: 4,
-    // Every attribute has 3 possible values
-    NUM_VALUES: 3,
-    // Number of cards shown initially
-    NUM_INITIAL_CARDS: 12,
-    // Number of cards to deal at a time
-    NUM_AT_A_TIME: 3,    
-    // Number of cards in a row
-    NUM_CARDS_IN_ROW: 3,
+    create: function() {
+        var self = Object.create(this);
+        // Every card has 4 attributes
+        self.NUM_ATTRS = 4;
+        // Every attribute has 3 possible values
+        self.NUM_VALUES = 3;
+        // Number of cards shown initially
+        self.NUM_INITIAL_CARDS = 12;
+        // Number of cards to deal at a time
+        self.NUM_AT_A_TIME = 3;
+        // Number of cards in a row
+        self.NUM_CARDS_PER_ROW = 3;
+        self.num_cards = Math.pow(self.NUM_VALUES, self.NUM_ATTRS);
+        self.images = self.load_images();
+        self.cards = self.make_deck(self.num_cards);
+        self.shown = [];
+        self.selected = [];
+        self.found = [];
+        self.current_sets = [];
+        self.is_find_all_mode = false;
+        self.is_show_num_sets_mode = false;            
+        return self;
+    },
 
     main: function() {
-        this.num_cards = Math.pow(this.NUM_VALUES, this.NUM_ATTRS);
-        this.images = this.load_images();
-        this.cards = this.make_deck(this.num_cards);
-        this.shown = [];
-        this.selected = [];
-        this.found = [];
-        this.current_sets = [];
-        this.is_find_all_mode = false;
-        this.is_show_num_sets_mode = false;            
+        this.current = set.create();
     },
 
     load_images: function() {
@@ -45,14 +50,8 @@ var set = {
         return images;
     },
 
-    randint: function(min, max) {
-        min = Math.ceil(min);
-        max = Math.floor(max);
-        return Math.floor(Math.random() * (max - min)) + min;
-    },
-
     make_deck: function(num_cards) {
-        return {
+        var cards = {
             cards: [],
             init: function() {
                 for (var ii = 0; ii < num_cards; ii++) {
@@ -60,6 +59,11 @@ var set = {
                 }
                 this.shuffle();
                 return this;
+            },
+            randint: function(min, max) {
+                min = Math.ceil(min);
+                max = Math.floor(max);
+                return Math.floor(Math.random() * (max - min)) + min;
             },
             shuffle: function() {
                 for (var ii = 0; ii < this.cards.length; ii++) {
@@ -79,9 +83,8 @@ var set = {
                     return this.cards[this.current++];
                 }
             },
-            
         }
-        return cards;
+        return cards.init();
     },
 
     draw_table: function(id, arr, onclick) {
@@ -94,7 +97,11 @@ var set = {
         remove_children(table);
         var tr;
         for (var ii = 0; ii < arr.length; ii++) {
-            if (ii % this.NUM_CARDS_IN_A_ROW == 0) {
+            console.log(ii);
+            console.log(this);
+            console.log(this.NUM_CARDS_PER_ROW);
+            if (ii % this.NUM_CARDS_PER_ROW == 0) {
+                console.log(ii);
                 tr = document.createElement("TR");
                 table.appendChild(tr);
             }
