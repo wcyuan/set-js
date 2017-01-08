@@ -1,11 +1,17 @@
 // Todo:
 //   [ ] function to draw the card table
 //       makes it from scratch every time?
+//   [ ] function to draw everything
+//       draws card tables
+//       updates button labels
 //   [ ] if a card is selected, its td has style selected
 //   [ ] add style sheet so that class selected is yellow
 //   [ ] when you click on a card, it is selected
 //   [ ] when 3 cards are selected, check to see if they are a set
 //      [ ] if so, deal + recompute current sets
+//      [ ] if no more sets, game over and selecting cards won't do anything
+//      [ ] when dealing, only deal the minimum, and make the user ask for more
+//          if they ask for more when not necessary, don't deal, just write a message
 //   [ ] set up the buttons, add functions to each of the buttons
 //   [ ] add a timer to show how long it took you to find a set
 //   [ ] keep track of stats (total time, time per set, etc)
@@ -127,7 +133,6 @@ var set = {
             img = document.createElement("IMG");
             td.appendChild(img);
             img.src = this.images[arr[ii]].src;
-            
             if (onclick) {
                 this.addEventListener(img, "click", onclick);
             }
