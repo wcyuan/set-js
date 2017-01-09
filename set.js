@@ -147,7 +147,9 @@ var set = {
             return;
         }
         while (!self.cards.is_eod() && (!self.set_exists() || self.shown.length < self.NUM_INITIAL_CARDS)) {
-            self.shown.push(self.cards.get_next_card());
+            for (var ii = 0; ii < self.NUM_AT_A_TIME; ii++ ) {
+                self.shown.push(self.cards.get_next_card());
+            }
         }
     },
 
@@ -415,8 +417,8 @@ var set = {
         }
         this.check_set();
         this.draw_table("card-table", this.shown, select_card, this.selected);
-        this.draw_table("show-past-sets", this.found);
-        this.draw_table("show-sets", this.current_sets);
+        this.draw_table("past-sets-table", this.found);
+        this.draw_table("current-sets-table", this.current_sets);
     },
 
     message: function(msg) {
