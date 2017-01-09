@@ -52,10 +52,21 @@ var set = {
         self.current_sets = [];
         self.is_find_all_mode = false;
         self.is_show_num_sets_mode = false;            
+        self.setup_ui();
+        self.init_game();
+        return self;
+    },
+
+    init_game: function() {
+        var self = this;
+        self.cards.shuffle();
+        self.shown = [];
+        self.selected = [];
+        self.found = [];
+        self.current_sets = [];
         for (var ii = 0; ii < self.NUM_INITIAL_CARDS; ii++) {
             self.shown.push(self.cards.get_next_card());
         }
-        self.setup();
         self.draw();
         return self;
     },
@@ -132,6 +143,7 @@ var set = {
     },
 
     check_set: function() {
+        this.update_num_sets();
     },
 
     // Drawing Functions --------------------------------------------
@@ -197,9 +209,44 @@ var set = {
         return this;
     },
 
-    setup: function() {
+    update_num_sets: function() {
+        var self = this;
+        var obj = document.getElementById("num-sets");
+        if (self.is_show_num_sets_mode) {
+            obj.value = self.current_sets.length + " sets";
+            if (self.is_find_all_mode) {
+                obj.value +=
+                    " (" + self.found.length + " found)";
+            }
+        } else {
+            obj.value = "# Sets";
+        }
+    },
+
+    setup_ui: function() {
+        var self = this;
         this.set_toggle_display("show-past-sets", "past-sets-div");
         this.set_toggle_display("show-sets", "current-sets-div");
+        var new_game = document.getElementById("new-game");
+        this.addEventListener(new_game, "click", function () {
+            return self.init_game();
+        });
+        var find_all = document.getElementById("find-all");
+        this.addEventListener(find_all, "click", function (obj) {
+            self.is_find_all_mode = !self.is_find_all_mode;
+            if (self.is_find_all_mode) {
+                obj.target.value = "Switch to Normal";
+            } else {
+                obj.target.value = "Switch to Find All";
+            }
+            self.init_game();
+            self.update_num_sets();
+        });
+        var num_sets = document.getElementById("num-sets");
+        this.addEventListener(num_sets, "click", function (obj) {
+            self.is_show_num_sets_mode = !self.is_show_num_sets_mode;
+            self.update_num_sets();
+        });
         return this;
     },
 
