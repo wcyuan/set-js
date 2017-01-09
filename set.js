@@ -403,6 +403,7 @@ var set = {
                 obj.style.backgroundColor = "yellow";
                 self.selected[obj.attributes["pic_id"]] = true;
             }
+            self.check_set();
         }
         this.check_set();
         this.draw_table("card-table", this.shown, select_card);
@@ -411,7 +412,7 @@ var set = {
     },
 
     message: function(msg) {
-        var obj = document.getElementById("message");
+        var obj = document.getElementById("messages");
         obj.value = msg;
     },
 };
