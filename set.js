@@ -64,9 +64,7 @@ var set = {
         self.selected = [];
         self.found = [];
         self.current_sets = [];
-        for (var ii = 0; ii < self.NUM_INITIAL_CARDS; ii++) {
-            self.shown.push(self.cards.get_next_card());
-        }
+        self.deal();
         self.draw();
         return self;
     },
@@ -142,8 +140,148 @@ var set = {
         return true;
     },
 
+    deal: function() {
+        var self = this;
+        if (self.cards.is_eod() && !self.set_exists()) {
+            self.message("End of Deck!");
+            return;
+        }
+        while (!self.cards.is_eod() && (!self.set_exists() || self.shown.length < self.NUM_INITIAL_CARDS)) {
+            self.shown.push(self.cards.get_next_card());
+        }
+    },
+
+    contains: function(selected, found) {
+        var self = this;
+        for (var ii = 0; ii < found.length; ii += self.NUM_VALUES) {
+            var all_found = true;
+            for (var jj = 0; jj < self.NUM_VALUES; jj++) {
+                var found = false;
+                for (var kk = 0; kk < self.NUM_VALUES; kk++) {
+                    if (selected[kk] == found[ii + jj]) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    all_found = false;
+                    break;
+                }
+            }
+            if (all_found) {
+                return true;
+            }
+        }
+        return false;
+    },
+
+    set_exists: function() {
+        var self = this;
+        self.current_sets = [];
+        if (self.shown.length < self.NUM_VALUES) {
+            return false;
+        }
+
+        // Loop over all sets of N_VALUES cards.
+        // First start with the cards in positions {0, 1, 2},
+        // then {0, 1, 3}, {0, 1, 4}, ... {0, 1, 11}, {0, 2, 3},
+        // {0, 2, 4}, etc.
+        var possible_set = [];
+        for (var ii = 0; ii < self.NUM_VALUES; ii++) {
+            possible_set[ii] = ii;
+        }
+        while (true) {
+            if (self.is_set(possible_set.map(function(pos) { return self.shown[pos]; }))) {
+                for (var ii = 0; ii < possible_set.length; ii++) {
+                    self.current_sets.push(self.shown[possible_set[ii]]);
+                }
+            }
+            // If it isn't a set, we've got to increment to the next possible
+            // set.
+            for (var ii = self.NUM_VALUES - 1; ii >= 0; ii--) {
+                possible_set[ii]++;
+                // In most cases, we can just increment the least significant
+                // bit. But once the least significant bit is as high as it can
+                // go, we've got to continue to the next bit and increment that
+                // one.
+                //
+                // The highest each bit can go is only high enough that all the
+                // bits after it can still be less than the number of cards
+                // shown.
+                if (possible_set[ii] < self.shown.length - self.NUM_VALUES + ii + 1) {
+                    // After we've set this bit, we have to set all the
+                    // bits after it.
+                    for (var jj = ii + 1; jj < self.NUM_VALUES; jj++) {
+                        possible_set[jj] = possible_set[jj - 1] + 1;
+                    }
+                    break;
+                }
+                // If this is the most significant bit, then we've tried
+                // everything.
+                if (ii == 0) {
+                    return self.current_sets.length > 0;
+                }
+            }
+        }
+    },
+
     check_set: function() {
-        this.update_num_sets();
+        var selected_pictures = [];
+        var selected_positions = [];
+        var self = this;
+        for (var ii = 0; ii < self.shown.length; ii++) {
+            if (self.selected[self.shown[ii]]) {
+                selected_pictures.push(self.shown[ii]);
+                selected_positions.push(ii);
+            }
+        }
+        if (selected_pictures.length < self.NUM_VALUES) {
+            return self;
+        }
+        if (!self.is_set(selected_pictures)) {
+            self.message("Not a set!");
+        } else if (self.is_find_all_mode && self.contains(selected_pictures, self.found)) {
+            self.message("You already found that set");
+        } else {
+            var msg = "Found a set!";
+            if (self.is_find_all_mode && !self.is_show_num_sets_mode) {
+                msg += " (Out of " + (self.current_sets.length / self.NUM_VALUES) + " sets in view)";
+            }
+            self.message(msg);
+            for (var ii = 0; ii < selected_positions.length; ii++) {
+                self.found.add(self.shown[selected_positions[ii]]);
+            }
+        }
+        if (self.is_find_all_mode) {
+            var new_game = document.getElementById("new-game");
+            if (self.found.length == self.current_sets.length) {
+                self.message("Found all " + (self.current_sets.length / self.NUM_VALUES) + " sets!");
+                new_game.value = "Game Over";
+            } else {
+                new_game.value = "New Game";
+            }
+        } else {
+            if (self.shown.length <= self.NUM_INITIAL_CARD && !self.cards.is_eod()) {
+                for (var ii = 0; ii < self.selected_positions; ii++) {
+                    self.shown[self.selected_positions[ii]] = self.cards.get_next_card();
+                }
+            } else {
+                var ii = 0;
+                var num_shown = self.shown.length;
+                for (var pos = num_shown - 1; pos > num_shown - 1 - self.NUM_VALUES; pos--) {
+                    if (!self.selected[self.shown[pos]]) {
+                        self.shown[selected_positions[ii]] = self.shown[pos];
+                        ii--; 
+                    }
+                    self.shown.pop();
+                }
+            }
+        }
+        for (var ii = 0; ii < selected_pictures.length; ii++) {
+            self.selected[selected_pictures[ii]] = false;
+        }
+        self.deal();
+        self.update_num_sets();
     },
 
     // Drawing Functions --------------------------------------------
@@ -213,10 +351,10 @@ var set = {
         var self = this;
         var obj = document.getElementById("num-sets");
         if (self.is_show_num_sets_mode) {
-            obj.value = self.current_sets.length + " sets";
+            obj.value = (self.current_sets.length / self.NUM_VALUES) + " sets";
             if (self.is_find_all_mode) {
                 obj.value +=
-                    " (" + self.found.length + " found)";
+                    " (" + (self.found.length / self.NUM_VALUES) + " found)";
             }
         } else {
             obj.value = "# Sets";
@@ -270,6 +408,11 @@ var set = {
         this.draw_table("card-table", this.shown, select_card);
         this.draw_table("show-past-sets", this.found);
         this.draw_table("show-sets", this.current_sets);
+    },
+
+    message: function(msg) {
+        var obj = document.getElementById("message");
+        obj.value = msg;
     },
 };
 
