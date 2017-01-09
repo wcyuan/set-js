@@ -124,7 +124,7 @@ var set = {
             var vals = [];
             var possibles = this.repeat(false, this.NUM_VALUES);
             for (var jj = 0; jj < this.NUM_VALUES; jj++) {
-                vals[jj] = (cards[jj] % (mask * this.NUM_VALUES)) / mask;
+                vals[jj] = Math.floor((cards[jj] % (mask * this.NUM_VALUES)) / mask);
                 if (possibles[vals[jj]]) {
                     alldifferent = false;
                 }
@@ -191,7 +191,8 @@ var set = {
             possible_set[ii] = ii;
         }
         while (true) {
-            if (self.is_set(possible_set.map(function(pos) { return self.shown[pos]; }))) {
+            var as_cards = possible_set.map(function(pos) { return self.shown[pos]; });
+            if (self.is_set(as_cards)) {
                 for (var ii = 0; ii < possible_set.length; ii++) {
                     self.current_sets.push(self.shown[possible_set[ii]]);
                 }
@@ -249,31 +250,31 @@ var set = {
             }
             self.message(msg);
             for (var ii = 0; ii < selected_positions.length; ii++) {
-                self.found.add(self.shown[selected_positions[ii]]);
+                self.found.push(self.shown[selected_positions[ii]]);
             }
-        }
-        if (self.is_find_all_mode) {
-            var new_game = document.getElementById("new-game");
-            if (self.found.length == self.current_sets.length) {
-                self.message("Found all " + (self.current_sets.length / self.NUM_VALUES) + " sets!");
-                new_game.value = "Game Over";
-            } else {
-                new_game.value = "New Game";
-            }
-        } else {
-            if (self.shown.length <= self.NUM_INITIAL_CARD && !self.cards.is_eod()) {
-                for (var ii = 0; ii < self.selected_positions; ii++) {
-                    self.shown[self.selected_positions[ii]] = self.cards.get_next_card();
+            if (self.is_find_all_mode) {
+                var new_game = document.getElementById("new-game");
+                if (self.found.length == self.current_sets.length) {
+                    self.message("Found all " + (self.current_sets.length / self.NUM_VALUES) + " sets!");
+                    new_game.value = "Game Over";
+                } else {
+                    new_game.value = "New Game";
                 }
             } else {
-                var ii = 0;
-                var num_shown = self.shown.length;
-                for (var pos = num_shown - 1; pos > num_shown - 1 - self.NUM_VALUES; pos--) {
-                    if (!self.selected[self.shown[pos]]) {
-                        self.shown[selected_positions[ii]] = self.shown[pos];
-                        ii--; 
+                if (self.shown.length <= self.NUM_INITIAL_CARD && !self.cards.is_eod()) {
+                    for (var ii = 0; ii < self.selected_positions; ii++) {
+                        self.shown[self.selected_positions[ii]] = self.cards.get_next_card();
                     }
-                    self.shown.pop();
+                } else {
+                    var ii = 0;
+                    var num_shown = self.shown.length;
+                    for (var pos = num_shown - 1; pos > num_shown - 1 - self.NUM_VALUES; pos--) {
+                        if (!self.selected[self.shown[pos]]) {
+                            self.shown[selected_positions[ii]] = self.shown[pos];
+                            ii--; 
+                        }
+                        self.shown.pop();
+                    }
                 }
             }
         }
@@ -307,7 +308,7 @@ var set = {
         } 
     },
 
-    draw_table: function(id, arr, onclick) {
+    draw_table: function(id, arr, onclick, selected) {
         var table = document.getElementById(id);
         function remove_children(node) {
             while (node.firstChild) {
@@ -326,6 +327,13 @@ var set = {
             img = document.createElement("IMG");
             td.appendChild(img);
             td.attributes["pic_id"] = arr[ii];
+            if (selected && selected[arr[ii]]) {
+                td.className = "selected";
+                td.style.backgroundColor = "yellow";
+            } else {
+                td.className = "";
+                td.style.backgroundColor = "";
+            }
             img.src = this.images[arr[ii]].src;
             if (onclick) {
                 this.addEventListener(img, "click", onclick);
@@ -403,10 +411,10 @@ var set = {
                 obj.style.backgroundColor = "yellow";
                 self.selected[obj.attributes["pic_id"]] = true;
             }
-            self.check_set();
+            self.draw();
         }
         this.check_set();
-        this.draw_table("card-table", this.shown, select_card);
+        this.draw_table("card-table", this.shown, select_card, this.selected);
         this.draw_table("show-past-sets", this.found);
         this.draw_table("show-sets", this.current_sets);
     },
