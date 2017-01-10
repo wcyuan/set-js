@@ -144,6 +144,7 @@ var set = {
         var self = this;
         if (self.cards.is_eod() && !self.set_exists()) {
             self.message("End of Deck!");
+            self.set_new_game_button(true);
             return;
         }
         while (!self.cards.is_eod() && (!self.set_exists() || self.shown.length < self.NUM_INITIAL_CARDS)) {
@@ -158,14 +159,14 @@ var set = {
         for (var ii = 0; ii < found.length; ii += self.NUM_VALUES) {
             var all_found = true;
             for (var jj = 0; jj < self.NUM_VALUES; jj++) {
-                var found = false;
+                var is_found = false;
                 for (var kk = 0; kk < self.NUM_VALUES; kk++) {
                     if (selected[kk] == found[ii + jj]) {
-                        found = true;
+                        is_found = true;
                         break;
                     }
                 }
-                if (!found) {
+                if (!is_found) {
                     all_found = false;
                     break;
                 }
@@ -255,17 +256,16 @@ var set = {
                 self.found.push(self.shown[selected_positions[ii]]);
             }
             if (self.is_find_all_mode) {
-                var new_game = document.getElementById("new-game");
                 if (self.found.length == self.current_sets.length) {
                     self.message("Found all " + (self.current_sets.length / self.NUM_VALUES) + " sets!");
-                    new_game.value = "Game Over";
+                    self.set_new_game_button(true);
                 } else {
-                    new_game.value = "New Game";
+                    self.set_new_game_button(false);
                 }
             } else {
-                if (self.shown.length <= self.NUM_INITIAL_CARD && !self.cards.is_eod()) {
-                    for (var ii = 0; ii < self.selected_positions; ii++) {
-                        self.shown[self.selected_positions[ii]] = self.cards.get_next_card();
+                if (self.shown.length <= self.NUM_INITIAL_CARDS && !self.cards.is_eod()) {
+                    for (var ii = 0; ii < selected_positions.length; ii++) {
+                        self.shown[selected_positions[ii]] = self.cards.get_next_card();
                     }
                 } else {
                     var ii = 0;
@@ -273,7 +273,7 @@ var set = {
                     for (var pos = num_shown - 1; pos > num_shown - 1 - self.NUM_VALUES; pos--) {
                         if (!self.selected[self.shown[pos]]) {
                             self.shown[selected_positions[ii]] = self.shown[pos];
-                            ii--; 
+                            ii++; 
                         }
                         self.shown.pop();
                     }
@@ -376,7 +376,8 @@ var set = {
         this.set_toggle_display("show-past-sets", "past-sets-div");
         this.set_toggle_display("show-sets", "current-sets-div");
         var new_game = document.getElementById("new-game");
-        this.addEventListener(new_game, "click", function () {
+        this.addEventListener(new_game, "click", function (obj) {
+            obj.target.value = "New Game";
             return self.init_game();
         });
         var find_all = document.getElementById("find-all");
@@ -396,6 +397,15 @@ var set = {
             self.update_num_sets();
         });
         return this;
+    },
+
+    set_new_game_button: function(is_game_over) {
+        var new_game = document.getElementById("new-game");
+        if (is_game_over) {
+            new_game.value = "Game Over";
+        } else {
+            new_game.value = "New Game";
+        }
     },
 
     draw: function() {
