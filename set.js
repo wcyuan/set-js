@@ -145,18 +145,21 @@ var set = {
         return true;
     },
 
-    deal: function() {
+    deal: function(num_to_show) {
         var self = this;
         if (self.cards.is_eod() && !self.set_exists()) {
             self.message("End of Deck!");
             self.set_new_game_button(true);
             return;
         }
-        while (!self.cards.is_eod() && (!self.set_exists() || self.shown.length < self.NUM_INITIAL_CARDS)) {
-            for (var ii = 0; ii < self.NUM_AT_A_TIME; ii++ ) {
-                self.shown.push(self.cards.get_next_card());
-            }
+        if (num_to_show === undefined) {
+            num_to_show = self.NUM_INITIAL_CARDS;
         }
+        while (!self.cards.is_eod() && self.shown.length < num_to_show) {
+            self.shown.push(self.cards.get_next_card());
+        }
+        // call set_exists once to set current_sets
+        self.set_exists();
     },
 
     contains: function(selected, found) {
@@ -183,6 +186,8 @@ var set = {
         return false;
     },
 
+    // this figures out what sets exist among the cards currently
+    // being shown, and saves that information in current_sets
     set_exists: function() {
         var self = this;
         self.current_sets = [];
@@ -413,6 +418,15 @@ var set = {
         this.addEventListener(num_sets, "click", function (obj) {
             self.is_show_num_sets_mode = !self.is_show_num_sets_mode;
             self.update_num_sets();
+        });
+        var deal_button = document.getElementById("deal");
+        this.addEventListener(deal_button, "click", function(obj) {
+            if (self.set_exists()) {
+                self.message("A set already exists!");
+            } else {
+                self.deal(self.shown.length + self.NUM_AT_A_TIME);
+                self.draw();
+            }
         });
         var auto_button = document.getElementById("auto");
         this.addEventListener(auto_button, "click", function(obj) {
