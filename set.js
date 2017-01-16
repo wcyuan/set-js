@@ -414,8 +414,8 @@ var set = {
             self.is_show_num_sets_mode = !self.is_show_num_sets_mode;
             self.update_num_sets();
         });
-        var deal_button = document.getElementById("deal");
-        this.addEventListener(deal_button, "click", function(obj) {
+        var auto_button = document.getElementById("auto");
+        this.addEventListener(auto_button, "click", function(obj) {
             self.clear_selected();
             selected_pictures = self.find_a_set();
             for (var ii = 0; ii < selected_pictures.length; ii++) {
@@ -500,10 +500,10 @@ var set = {
         if (is_selected) {
             // XXX not sure what the problem is with my CSS
             obj.className = "selected";
-            obj.style.backgroundColor = "yellow";
+            obj.style.backgroundColor = "red";
         } else if (is_hinted) {
             obj.className = "";
-            obj.style.backgroundColor = "red";
+            obj.style.backgroundColor = "blue";
         } else {
             obj.className = "";
             obj.style.backgroundColor = "";
