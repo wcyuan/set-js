@@ -432,6 +432,10 @@ var set = {
         this.addEventListener(auto_button, "click", function(obj) {
             self.clear_selected();
             selected_pictures = self.find_a_set();
+            if (selected_pictures.length == 0) {
+                self.deal(self.shown.length + self.NUM_AT_A_TIME);
+                self.draw();
+            }
             for (var ii = 0; ii < selected_pictures.length; ii++) {
                 self.selected[selected_pictures[ii]] = true;
             }
