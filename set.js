@@ -48,6 +48,7 @@ var set = {
         // selected is a list of the cards selected.  The index is the number of
         // the card, the value is a boolean, true/false whether it is selected
         self.selected = [];
+        self.hinted = [];
         self.found = [];
         self.current_sets = [];
         self.is_find_all_mode = false;
@@ -62,6 +63,7 @@ var set = {
         self.cards.shuffle();
         self.shown = [];
         self.selected = [];
+        self.hinted = [];
         self.found = [];
         self.current_sets = [];
         self.deal();
@@ -96,6 +98,9 @@ var set = {
             },
             is_eod: function() {
                 return this.current >= this.cards.length;
+            },
+            num_remaining: function() {
+                return this.cards.length - this.current;
             },
             get_next_card: function() {
                 if (!this.is_eod()) {
@@ -229,40 +234,52 @@ var set = {
         }
     },
 
-    check_set: function() {
+    get_selected: function() {
+        var self = this;
         var selected_pictures = [];
         var selected_positions = [];
-        var self = this;
         for (var ii = 0; ii < self.shown.length; ii++) {
             if (self.selected[self.shown[ii]]) {
                 selected_pictures.push(self.shown[ii]);
                 selected_positions.push(ii);
             }
         }
+        return [selected_pictures, selected_positions];
+    },
+
+    check_set: function() {
+        var self = this;
+        var msg = "";
+        var selected_info = this.get_selected();
+        var selected_pictures = selected_info[0];
+        var selected_positions = selected_info[1];
         if (selected_pictures.length < self.NUM_VALUES) {
+            if (!self.is_find_all_mode) {
+                msg = self.cards.num_remaining() + " cards remaining";
+            }
+            self.message(msg);
             return self;
         }
         if (!self.is_set(selected_pictures)) {
-            self.message("Not a set!");
+            msg = "Not a set!";
         } else if (self.is_find_all_mode && self.contains(selected_pictures, self.found)) {
-            self.message("You already found that set");
+            msg = "You already found that set";
         } else {
-            var msg = "Found a set!";
-            if (self.is_find_all_mode && !self.is_show_num_sets_mode) {
-                msg += " (Out of " + (self.current_sets.length / self.NUM_VALUES) + " sets in view)";
-            }
-            self.message(msg);
             for (var ii = 0; ii < selected_positions.length; ii++) {
                 self.found.push(self.shown[selected_positions[ii]]);
             }
             if (self.is_find_all_mode) {
                 if (self.found.length == self.current_sets.length) {
-                    self.message("Found all " + (self.current_sets.length / self.NUM_VALUES) + " sets!");
+                    msg = "Found all " + (self.current_sets.length / self.NUM_VALUES) + " sets!";
                     self.set_new_game_button(true);
                 } else {
+                    if (self.is_find_all_mode) {
+                        msg += "Found a set (" + (self.found.length / self.NUM_VALUES) + " sets found)";
+                    }
                     self.set_new_game_button(false);
                 }
             } else {
+                msg = "Found a set! (Out of " + (self.current_sets.length / self.NUM_VALUES) + " sets in view)";
                 if (self.shown.length <= self.NUM_INITIAL_CARDS && !self.cards.is_eod()) {
                     for (var ii = 0; ii < selected_positions.length; ii++) {
                         self.shown[selected_positions[ii]] = self.cards.get_next_card();
@@ -282,7 +299,12 @@ var set = {
         }
         for (var ii = 0; ii < selected_pictures.length; ii++) {
             self.selected[selected_pictures[ii]] = false;
+            self.hinted[selected_pictures[ii]] = false;
         }
+        if (!self.is_find_all_mode) {
+            msg += "  " + self.cards.num_remaining() + " cards remaining";
+        }
+        self.message(msg);
         self.deal();
         self.update_num_sets();
     },
@@ -310,7 +332,8 @@ var set = {
         } 
     },
 
-    draw_table: function(id, arr, onclick, selected) {
+    draw_table: function(id, arr, onclick, selected, hinted) {
+        var self = this;
         var table = document.getElementById(id);
         function remove_children(node) {
             while (node.firstChild) {
@@ -329,16 +352,10 @@ var set = {
             img = document.createElement("IMG");
             td.appendChild(img);
             td.attributes["pic_id"] = arr[ii];
-            if (selected && selected[arr[ii]]) {
-                td.className = "selected";
-                td.style.backgroundColor = "yellow";
-            } else {
-                td.className = "";
-                td.style.backgroundColor = "";
-            }
+            this.render_selected(td, selected && selected[arr[ii]], hinted && hinted[arr[ii]]);
             img.src = this.images[arr[ii]].src;
             if (onclick) {
-                this.addEventListener(img, "click", onclick);
+                this.addEventListener(img, "click", function (evt) { return onclick.call(self, evt); });
             }
         }
     },
@@ -384,19 +401,90 @@ var set = {
         this.addEventListener(find_all, "click", function (obj) {
             self.is_find_all_mode = !self.is_find_all_mode;
             if (self.is_find_all_mode) {
-                obj.target.value = "Switch to Normal";
+                obj.target.value = "Find All";
+                self.found = [];
             } else {
-                obj.target.value = "Switch to Find All";
+                obj.target.value = "Normal";
             }
-            self.init_game();
-            self.update_num_sets();
+            // self.init_game();
+            self.draw();
         });
         var num_sets = document.getElementById("num-sets");
         this.addEventListener(num_sets, "click", function (obj) {
             self.is_show_num_sets_mode = !self.is_show_num_sets_mode;
             self.update_num_sets();
         });
+        var deal_button = document.getElementById("deal");
+        this.addEventListener(deal_button, "click", function(obj) {
+            self.clear_selected();
+            selected_pictures = self.find_a_set();
+            for (var ii = 0; ii < selected_pictures.length; ii++) {
+                self.selected[selected_pictures[ii]] = true;
+            }
+            self.draw();
+        });
+        var hint_button = document.getElementById("hint");
+        this.addEventListener(hint_button, "click", function(obj) {
+            self.clear_hinted();
+            selected_pictures = self.find_a_set(true);
+            if (selected_pictures.length == 0) {
+                selected_pictures = self.find_a_set();
+            }
+            for (var ii = 0; ii < selected_pictures.length; ii++) {
+                if (!self.selected[selected_pictures[ii]]) {
+                    self.hinted[selected_pictures[ii]] = true;
+                    break;
+                }
+            }
+            self.draw();
+        });
         return this;
+    },
+
+    clear_selected: function() {
+        var self = this;
+        for (var ii = 0; ii < self.num_cards; ii++) {
+            self.selected[ii] = false;
+        }
+    },
+
+    clear_hinted: function() {
+        var self = this;
+        for (var ii = 0; ii < self.num_cards; ii++) {
+            self.hinted[ii] = false;
+        }
+    },
+
+    find_a_set: function(filter_by_selected) {
+        var self = this;
+        var pics_to_select = [];
+        var selected_pictures;
+        if (filter_by_selected) {
+            selected_pictures = this.get_selected()[0];
+        }
+        for (var ii = 0; ii < self.current_sets.length; ii++) {
+            pics_to_select.push(self.current_sets[ii]);
+            if (pics_to_select.length ==  self.NUM_VALUES) {
+                if (self.contains(pics_to_select, self.found)) {
+                    pics_to_select = [];
+                } else {
+                    if (selected_pictures) {
+                        for (var jj = 0; jj < selected_pictures.length; jj++) {
+                            if (pics_to_select.filter(function(e) {
+                                return e == selected_pictures[jj];
+                            }).length == 0) {
+                                pics_to_select = [];
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (pics_to_select.length == self.NUM_VALUES) {
+                    break;
+                }
+            }
+        }
+        return pics_to_select;
     },
 
     set_new_game_button: function(is_game_over) {
@@ -408,25 +496,41 @@ var set = {
         }
     },
 
+    render_selected: function(obj, is_selected, is_hinted) {
+        if (is_selected) {
+            // XXX not sure what the problem is with my CSS
+            obj.className = "selected";
+            obj.style.backgroundColor = "yellow";
+        } else if (is_hinted) {
+            obj.className = "";
+            obj.style.backgroundColor = "red";
+        } else {
+            obj.className = "";
+            obj.style.backgroundColor = "";
+        }
+        return obj;
+    },
+
+    on_select_card: function(evt) {
+        var self = this;
+        var obj = evt.target.parentNode;
+        var cls = obj.className;
+        self.hinted[obj.attributes["pic_id"]] = false;
+        if (cls == "selected") {
+            self.render_selected(obj, false);
+            self.selected[obj.attributes["pic_id"]] = false;
+        } else {
+            self.render_selected(obj, true);
+            self.selected[obj.attributes["pic_id"]] = true;
+        }
+        self.draw();
+    },
+
     draw: function() {
         var self = this;
-        function select_card(evt) {
-            var obj = evt.target.parentNode;
-            var cls = obj.className;
-            if (cls == "selected") {
-                obj.className = "";
-                // XXX not sure what the problem is with my CSS
-                obj.style.backgroundColor = "";
-                self.selected[obj.attributes["pic_id"]] = false;
-            } else {
-                obj.className = "selected";
-                obj.style.backgroundColor = "yellow";
-                self.selected[obj.attributes["pic_id"]] = true;
-            }
-            self.draw();
-        }
         this.check_set();
-        this.draw_table("card-table", this.shown, select_card, this.selected);
+        this.update_num_sets();
+        this.draw_table("card-table", this.shown, this.on_select_card, this.selected, this.hinted);
         this.draw_table("past-sets-table", this.found);
         this.draw_table("current-sets-table", this.current_sets);
     },
