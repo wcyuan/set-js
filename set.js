@@ -74,8 +74,11 @@ var set = {
         return self;
     },
 
-    record_event: function(description) {
+    record_event: function(description, num_sets) {
         this.times.push({description: description, datetime: new Date()});
+        if (num_sets) {
+            this.times[this.times.length - 1].num_sets = num_sets;
+        }
         return self;
     },
     make_deck: function(num_cards) {
@@ -279,15 +282,16 @@ var set = {
             for (var ii = 0; ii < selected_positions.length; ii++) {
                 self.found.push(self.shown[selected_positions[ii]]);
             }
-            self.record_event("set");
+            var num_sets = self.current_sets.length / self.NUM_VALUES;
+            self.record_event("set", num_sets);
             if (self.is_find_all_mode) {
                 if (self.found.length == self.current_sets.length) {
-                    msg = "Found all " + (self.current_sets.length / self.NUM_VALUES) + " sets!";
+                    msg = "Found all " + num_sets + " sets!";
                 } else {
                     msg = "Found a set (" + (self.found.length / self.NUM_VALUES) + " sets found)";
                 }
             } else {
-                msg = "Found a set! (Out of " + (self.current_sets.length / self.NUM_VALUES) + " sets in view)";
+                msg = "Found a set! (Out of " + num_sets + " sets in view)";
                 if (self.shown.length <= self.NUM_INITIAL_CARDS && !self.cards.is_eod()) {
                     for (var ii = 0; ii < selected_positions.length; ii++) {
                         self.shown[selected_positions[ii]] = self.cards.get_next_card();
@@ -344,10 +348,15 @@ var set = {
         var td = document.createElement("TD");
         tr.appendChild(td);
         td.innerHTML = times[idx].datetime;
+        var td = document.createElement("TD");
+        tr.appendChild(td);
         if (idx > 0) {
-            var td = document.createElement("TD");
-            tr.appendChild(td);
             td.innerHTML = times[idx].datetime - times[idx-1].datetime;
+        }
+        var td = document.createElement("TD");
+        tr.appendChild(td);
+        if ("num_sets" in times[idx]) {
+            td.innerHTML = "(" + times[idx].num_sets + " sets)";
         }
     },
 
