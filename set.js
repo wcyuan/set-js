@@ -157,18 +157,21 @@ var set = {
 
     deal: function(num_to_show) {
         var self = this;
+        var dealt = false;
         if (self.cards.is_eod() && !self.set_exists()) {
             self.message("End of Deck!", true);
-            return;
+            return dealt;
         }
         if (num_to_show === undefined) {
             num_to_show = self.NUM_INITIAL_CARDS;
         }
         while (!self.cards.is_eod() && self.shown.length < num_to_show) {
             self.shown.push(self.cards.get_next_card());
+            dealt = true;
         }
         // call set_exists once to set current_sets
         self.set_exists();
+        return dealt;
     },
 
     contains: function(selected, found) {
@@ -351,9 +354,6 @@ var set = {
     add_time_col: function(times, idx, tr) {
         var td = document.createElement("TD");
         tr.appendChild(td);
-        td.innerHTML = times[idx].datetime;
-        var td = document.createElement("TD");
-        tr.appendChild(td);
         if (idx > 0) {
             var ms = times[idx].datetime - times[idx-1].datetime;
             var mins = Math.floor(ms / 60 / 1000);
@@ -377,7 +377,7 @@ var set = {
         while (times && idx < times.length && times[idx].description != "set") {
             var td = document.createElement("TD");
             tr.appendChild(td);
-            td.innerHTML = times[idx].description;
+            td.innerHTML = times[idx].description + " - " + times[idx].datetime;
             td.colSpan = self.NUM_CARDS_PER_ROW;
             self.add_time_col(times, idx, tr);
             idx++;
@@ -488,9 +488,11 @@ var set = {
             if (self.set_exists()) {
                 self.message("A set already exists!");
             } else {
-                self.deal(self.shown.length + self.NUM_AT_A_TIME);
+                var dealt = self.deal(self.shown.length + self.NUM_AT_A_TIME);
                 self.draw();
-                self.record_event("no-sets-exist");
+                if (dealt) {
+                    self.record_event("no-sets-exist");
+                }
             }
         });
         var auto_button = document.getElementById("auto");
@@ -498,8 +500,11 @@ var set = {
             self.clear_selected();
             selected_pictures = self.find_a_set();
             if (selected_pictures.length == 0) {
-                self.deal(self.shown.length + self.NUM_AT_A_TIME);
+                var dealt = self.deal(self.shown.length + self.NUM_AT_A_TIME);
                 self.draw();
+                if (dealt) {
+                    self.record_event("no-sets-exist");
+                }
             }
             for (var ii = 0; ii < selected_pictures.length; ii++) {
                 self.selected[selected_pictures[ii]] = true;
