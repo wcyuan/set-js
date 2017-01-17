@@ -286,12 +286,12 @@ var set = {
             self.record_event("set", num_sets);
             if (self.is_find_all_mode) {
                 if (self.found.length == self.current_sets.length) {
-                    msg = "Found all " + num_sets + " sets!";
+                    msg = "Found all " + num_sets + " sets! ";
                 } else {
-                    msg = "Found a set (" + (self.found.length / self.NUM_VALUES) + " sets found)";
+                    msg = "Found a set (" + (self.found.length / self.NUM_VALUES) + " sets found) ";
                 }
             } else {
-                msg = "Found a set! (Out of " + num_sets + " sets in view)";
+                msg = "Found a set! (Out of " + num_sets + " sets in view) ";
                 if (self.shown.length <= self.NUM_INITIAL_CARDS && !self.cards.is_eod()) {
                     for (var ii = 0; ii < selected_positions.length; ii++) {
                         self.shown[selected_positions[ii]] = self.cards.get_next_card();
@@ -308,13 +308,17 @@ var set = {
                     }
                 }
             }
+            if (self.times.length > 1) {
+                var time_taken = self.times[self.times.length-1].datetime - self.times[self.times.length-2].datetime;
+                msg += (time_taken / 1000) + " seconds.  ";
+            }
         }
         for (var ii = 0; ii < selected_pictures.length; ii++) {
             self.selected[selected_pictures[ii]] = false;
             self.hinted[selected_pictures[ii]] = false;
         }
         if (!self.is_find_all_mode) {
-            msg += "  " + self.cards.num_remaining() + " cards remaining.  ";
+            msg += self.cards.num_remaining() + " cards remaining.  ";
         }
         self.message(msg);
         self.deal();
@@ -351,7 +355,15 @@ var set = {
         var td = document.createElement("TD");
         tr.appendChild(td);
         if (idx > 0) {
-            td.innerHTML = times[idx].datetime - times[idx-1].datetime;
+            var ms = times[idx].datetime - times[idx-1].datetime;
+            var mins = Math.floor(ms / 60 / 1000);
+            ms -= mins * 60 * 1000;
+            if (mins > 0) {
+                td.innerHTML = mins + " mins, ";
+            } else {
+                td.innerHTML = "";
+            }
+            td.innerHTML += ms / 1000 + " sec";
         }
         var td = document.createElement("TD");
         tr.appendChild(td);
