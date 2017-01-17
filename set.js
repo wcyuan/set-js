@@ -421,9 +421,9 @@ var set = {
                 var sum = set_times.reduce((previous, current) => current += previous);
                 td.innerHTML = "median: " +
                     self.format_time(set_times[Math.floor(set_times.length / 2)]) +
-                    ", ave: " + self.format_time(sum / set_times.length) +
-                    ", max: " + self.format_time(Math.max.apply(null, set_times)) +
-                    ", min: " + self.format_time(Math.min.apply(null, set_times));
+                    "<br> ave: " + self.format_time(sum / set_times.length) +
+                    "<br> max: " + self.format_time(Math.max.apply(null, set_times)) +
+                    "<br> min: " + self.format_time(Math.min.apply(null, set_times));
                 tr = document.createElement("TR");
                 table.appendChild(tr);
             }
