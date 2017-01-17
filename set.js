@@ -148,8 +148,7 @@ var set = {
     deal: function(num_to_show) {
         var self = this;
         if (self.cards.is_eod() && !self.set_exists()) {
-            self.message("End of Deck!");
-            self.set_new_game_button(true);
+            self.message("End of Deck!", true);
             return;
         }
         if (num_to_show === undefined) {
@@ -260,7 +259,7 @@ var set = {
         var selected_positions = selected_info[1];
         if (selected_pictures.length < self.NUM_VALUES) {
             if (!self.is_find_all_mode) {
-                msg = self.cards.num_remaining() + " cards remaining";
+                msg = self.cards.num_remaining() + " cards remaining.  ";
             }
             self.message(msg);
             return self;
@@ -276,12 +275,8 @@ var set = {
             if (self.is_find_all_mode) {
                 if (self.found.length == self.current_sets.length) {
                     msg = "Found all " + (self.current_sets.length / self.NUM_VALUES) + " sets!";
-                    self.set_new_game_button(true);
                 } else {
-                    if (self.is_find_all_mode) {
-                        msg += "Found a set (" + (self.found.length / self.NUM_VALUES) + " sets found)";
-                    }
-                    self.set_new_game_button(false);
+                    msg = "Found a set (" + (self.found.length / self.NUM_VALUES) + " sets found)";
                 }
             } else {
                 msg = "Found a set! (Out of " + (self.current_sets.length / self.NUM_VALUES) + " sets in view)";
@@ -307,7 +302,7 @@ var set = {
             self.hinted[selected_pictures[ii]] = false;
         }
         if (!self.is_find_all_mode) {
-            msg += "  " + self.cards.num_remaining() + " cards remaining";
+            msg += "  " + self.cards.num_remaining() + " cards remaining.  ";
         }
         self.message(msg);
         self.deal();
@@ -547,15 +542,26 @@ var set = {
     draw: function() {
         var self = this;
         this.check_set();
+        var is_game_over = false;
+	if (self.is_find_all_mode) {
+            is_game_over = self.found.length == self.current_sets.length;
+        } else {
+            is_game_over = self.cards.is_eod() && !self.set_exists();
+        }
+        self.set_new_game_button(is_game_over);
         this.update_num_sets();
         this.draw_table("card-table", this.shown, this.on_select_card, this.selected, this.hinted);
         this.draw_table("past-sets-table", this.found);
         this.draw_table("current-sets-table", this.current_sets);
     },
 
-    message: function(msg) {
+    message: function(msg, should_append) {
         var obj = document.getElementById("messages");
-        obj.value = msg;
+        if (should_append) {
+            obj.value += msg;
+        } else {
+            obj.value = msg;
+        }
     },
 };
 
