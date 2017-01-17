@@ -50,6 +50,8 @@ var set = {
         self.selected = [];
         self.hinted = [];
         self.found = [];
+        self.times = [];
+        self.events = [];
         self.current_sets = [];
         self.is_find_all_mode = false;
         self.is_show_num_sets_mode = false;            
@@ -65,9 +67,13 @@ var set = {
         self.selected = [];
         self.hinted = [];
         self.found = [];
+        self.times = [];
+        self.events = [];
         self.current_sets = [];
         self.deal();
         self.draw();
+        self.times.push(new Date());
+        self.events.push("start");
         return self;
     },
 
@@ -272,6 +278,8 @@ var set = {
             for (var ii = 0; ii < selected_positions.length; ii++) {
                 self.found.push(self.shown[selected_positions[ii]]);
             }
+            self.times.push(new Date());
+            self.events.push("set");
             if (self.is_find_all_mode) {
                 if (self.found.length == self.current_sets.length) {
                     msg = "Found all " + (self.current_sets.length / self.NUM_VALUES) + " sets!";
@@ -332,21 +340,51 @@ var set = {
         } 
     },
 
-    draw_table: function(id, arr, onclick, selected, hinted) {
+    add_time_col: function(times, idx, tr) {
+        var td = document.createElement("TD");
+        tr.appendChild(td);
+        td.innerHTML = times[idx];
+        if (idx > 0) {
+            var td = document.createElement("TD");
+            tr.appendChild(td);
+            td.innerHTML = times[idx] - times[idx-1];
+        }
+    },
+
+    add_events: function(events, times, idx, tr, table) {
+        var self = this;
+        while (events && times && idx < events.length && idx < times.length &&
+                events[idx] != "set") {
+            var td = document.createElement("TD");
+            tr.appendChild(td);
+            td.innerHTML = events[idx];
+            td.colSpan = self.NUM_CARDS_PER_ROW;
+            self.add_time_col(times, idx, tr);
+            idx++;
+            tr = document.createElement("TR");
+            table.appendChild(tr);
+        }
+        return [tr, idx];
+    },
+
+    draw_table: function(id, arr, onclick, selected, hinted, events, times) {
         var self = this;
         var table = document.getElementById(id);
+        // remove the existing table
         function remove_children(node) {
             while (node.firstChild) {
                 node.removeChild(node.firstChild);
             }
         }
         remove_children(table);
-        var tr;
+        // create a new table
+        var time_idx = 0;
+        var tr = document.createElement("TR");
+        table.appendChild(tr);
         for (var ii = 0; ii < arr.length; ii++) {
-            if (ii % this.NUM_CARDS_PER_ROW == 0) {
-                tr = document.createElement("TR");
-                table.appendChild(tr);
-            }
+            var info = self.add_events(events, times, time_idx, tr, table);
+            tr = info[0];
+            time_idx = info[1];
             var td = document.createElement("TD");
             tr.appendChild(td);
             img = document.createElement("IMG");
@@ -357,7 +395,17 @@ var set = {
             if (onclick) {
                 this.addEventListener(img, "click", function (evt) { return onclick.call(self, evt); });
             }
+            if ((ii + 1) % this.NUM_CARDS_PER_ROW == 0) {
+                if (events && times && time_idx < events.length && time_idx < times.length &&
+                    events[time_idx] == "set") {
+                    self.add_time_col(times, time_idx, tr);
+                    time_idx++;
+                }
+                tr = document.createElement("TR");
+                table.appendChild(tr);
+            }
         }
+        self.add_events(events, times, time_idx, tr, table);
     },
 
     set_toggle_display: function(button_id, div_id) {
@@ -402,10 +450,12 @@ var set = {
             self.is_find_all_mode = !self.is_find_all_mode;
             if (self.is_find_all_mode) {
                 obj.target.value = "Find All";
-                self.found = [];
             } else {
                 obj.target.value = "Normal";
             }
+            self.found = [];
+            self.times = [new Date()];
+            self.events = ["start"];
             // self.init_game();
             self.draw();
         });
@@ -421,6 +471,8 @@ var set = {
             } else {
                 self.deal(self.shown.length + self.NUM_AT_A_TIME);
                 self.draw();
+                self.times.push(new Date());
+                self.events.push("no-sets-exist");
             }
         });
         var auto_button = document.getElementById("auto");
@@ -543,7 +595,7 @@ var set = {
         var self = this;
         this.check_set();
         var is_game_over = false;
-	if (self.is_find_all_mode) {
+	    if (self.is_find_all_mode) {
             is_game_over = self.found.length == self.current_sets.length;
         } else {
             is_game_over = self.cards.is_eod() && !self.set_exists();
@@ -551,7 +603,7 @@ var set = {
         self.set_new_game_button(is_game_over);
         this.update_num_sets();
         this.draw_table("card-table", this.shown, this.on_select_card, this.selected, this.hinted);
-        this.draw_table("past-sets-table", this.found);
+        this.draw_table("past-sets-table", this.found, undefined, undefined, undefined, this.events, this.times);
         this.draw_table("current-sets-table", this.current_sets);
     },
 
