@@ -272,15 +272,15 @@ var set = {
         var selected_positions = selected_info[1];
         if (selected_pictures.length < self.NUM_VALUES) {
             if (!self.is_find_all_mode) {
-                msg = self.cards.num_remaining() + " cards remaining.  ";
+                msg = self.cards.num_remaining() + " cards remaining. ";
             }
             self.message(msg);
             return self;
         }
         if (!self.is_set(selected_pictures)) {
-            msg = "Not a set!";
+            msg = "Not a set! ";
         } else if (self.is_find_all_mode && self.contains(selected_pictures, self.found)) {
-            msg = "You already found that set";
+            msg = "You already found that set. ";
         } else {
             for (var ii = 0; ii < selected_positions.length; ii++) {
                 self.found.push(self.shown[selected_positions[ii]]);
@@ -313,7 +313,7 @@ var set = {
             }
             if (self.times.length > 1) {
                 var time_taken = self.times[self.times.length-1].datetime - self.times[self.times.length-2].datetime;
-                msg += (time_taken / 1000) + " seconds.  ";
+                msg += self.format_time(time_taken) + " ";
             }
         }
         for (var ii = 0; ii < selected_pictures.length; ii++) {
@@ -351,19 +351,24 @@ var set = {
         } 
     },
 
+    format_time: function(ms) {
+        var retval = "";
+        ms = Math.floor(ms);
+        var mins = Math.floor(ms / 60 / 1000);
+        ms -= mins * 60 * 1000;
+        if (mins > 0) {
+            retval = mins + " mins, ";
+        }
+        retval += ms / 1000 + " sec";
+        return retval;
+    },
+
     add_time_col: function(times, idx, tr) {
         var td = document.createElement("TD");
         tr.appendChild(td);
         if (idx > 0) {
             var ms = times[idx].datetime - times[idx-1].datetime;
-            var mins = Math.floor(ms / 60 / 1000);
-            ms -= mins * 60 * 1000;
-            if (mins > 0) {
-                td.innerHTML = mins + " mins, ";
-            } else {
-                td.innerHTML = "";
-            }
-            td.innerHTML += ms / 1000 + " sec";
+            td.innerHTML = this.format_time(ms);
         }
         var td = document.createElement("TD");
         tr.appendChild(td);
@@ -401,6 +406,28 @@ var set = {
         var time_idx = 0;
         var tr = document.createElement("TR");
         table.appendChild(tr);
+        if (times) {
+            var set_times = [];
+            times.forEach(function(elt, idx, arr) {
+                if (elt.description == "set" && idx > 0) {
+                    set_times.push(elt.datetime - arr[idx - 1].datetime);
+                }
+            });
+            if (set_times.length > 0) {
+                set_times.sort();
+                var td = document.createElement("TD");
+                tr.appendChild(td);
+                td.colSpan = self.NUM_CARDS_PER_ROW;
+                var sum = set_times.reduce((previous, current) => current += previous);
+                td.innerHTML = "median: " +
+                    self.format_time(set_times[Math.floor(set_times.length / 2)]) +
+                    ", ave: " + self.format_time(sum / set_times.length) +
+                    ", max: " + self.format_time(Math.max.apply(null, set_times)) +
+                    ", min: " + self.format_time(Math.min.apply(null, set_times));
+                tr = document.createElement("TR");
+                table.appendChild(tr);
+            }
+        }
         for (var ii = 0; ii < arr.length; ii++) {
             var info = self.add_events(times, time_idx, tr, table);
             tr = info[0];
