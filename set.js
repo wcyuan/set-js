@@ -81,9 +81,11 @@ var set = {
         }
         return self;
     },
+
     make_deck: function(num_cards) {
         var cards = {
             cards: [],
+
             init: function() {
                 for (var ii = 0; ii < num_cards; ii++) {
                     this.cards.push(ii);
@@ -91,14 +93,17 @@ var set = {
                 this.shuffle();
                 return this;
             },
+
             randint: function(min, max) {
                 min = Math.ceil(min);
                 max = Math.floor(max);
                 return Math.floor(Math.random() * (max - min)) + min;
             },
+
             alphabet: "abcdefghijklmnopqrstuvwxyz0123456789",
             separator: "-",
             chunk_size: 15,
+
             encode_int: function(input, alphabet) {
                 if (!alphabet) {
                     alphabet = self.alphabet;
@@ -111,6 +116,7 @@ var set = {
                 }
                 return hash;
             },
+
             split_string(input, len) {
                 if (!len) {
                     len = 15;
@@ -122,6 +128,7 @@ var set = {
                 }
                 return retval;
             },
+
             encode: function(input, separator, alphabet, chunk_size) {
                 var self = this;
                 if (!alphabet) {
@@ -137,6 +144,7 @@ var set = {
                     return self.encode_int(elt, alphabet);
                 }).join(separator);
             },
+
             decode_int: function(hash, alphabet) {
                 var self = this;
                 if (!alphabet) {
@@ -152,6 +160,7 @@ var set = {
                 }
                 return output;
             },
+
             repeat: function(elt, n_times) {
                 var arr = [];
                 for (var ii = 0; ii < n_times; ii++) {
@@ -159,9 +168,12 @@ var set = {
                 }
                 return arr;
             },
+
             leftpad: function(string, len, pad) {
                 return this.repeat(pad, len - (""+ string).length).join("") + string;
             },
+
+            // the process of encoding and decoding may add leading zeros
             decode(hash, separator, alphabet, chunk_size) {
                 var self = this;
                 if (!alphabet) {
@@ -180,26 +192,44 @@ var set = {
                     return res;
                 }).join("");
             },
-            set_cards(id) {
+
+            id_to_array: function(id, len) {
+                if (!len) {
+                    len = this.cards.length;
+                }
                 var order = this.decode(id);
-                var padsize = Math.floor(Math.log10(this.cards.length)) + 1;
-                var len = padsize * this.cards.length;
-                order = order.substr(-len);
+                var padsize = Math.floor(Math.log10(len)) + 1;
+                order = order.substr(-padsize * len);
                 var seen = {};
-                for (var ii = 0; ii < this.cards.length; ii++) {
-                    this.cards[ii] = parseInt(order.substr(ii*padsize, padsize), 10);
-                    if (this.cards[ii] in seen) {
+                var arr = [];
+                var is_success = true;
+                for (var ii = 0; ii < len; ii++) {
+                    arr[ii] = parseInt(order.substr(ii*padsize, padsize), 10);
+                    if (arr[ii] in seen) {
                         console.log("ERROR: id " + id +
                                 " results in malformed deck (same card multiple times: "
-                                + this.cards[ii]);
+                                + arr[ii]);
+                        is_success = false;
                     }
-                    seen[this.cards[ii]] = 1;
+                    seen[arr[ii]] = 1;
                 }
-                if (id != this.id()) {
-                    console.log("ERROR: id " + id + " is decoded to the wrong thing " + this.id); 
+                var new_id = this.encode(this.arr_string(arr));
+                if (id != new_id) {
+                    console.log("ERROR: id " + id + " is decoded to the wrong thing " + new_id); 
+                    is_success = false;
                 }
+                return [is_success, arr];
             },
-            arr_string(arr) {
+
+            set_cards: function(id) {
+                var result = this.id_to_array(id, this.cards.length);
+                if (result[0]) {
+                    this.cards = result[1];
+                }
+                return result[0];
+            },
+
+            arr_string: function(arr) {
                 var self = this;
                 if (!arr) {
                     arr = self.cards;
@@ -209,9 +239,11 @@ var set = {
                     return self.leftpad(elt, padsize, "0");
                 }).join("");
             },
-            id() {
+
+            id: function() {
                 return this.encode(this.arr_string(this.cards));
             },
+
             shuffle: function() {
                 var self = this;
                 for (var ii = 0; ii < this.cards.length; ii++) {
@@ -223,12 +255,15 @@ var set = {
                 this.current = 0;
                 return this;
             },
+
             is_eod: function() {
                 return this.current >= this.cards.length;
             },
+
             num_remaining: function() {
                 return this.cards.length - this.current;
             },
+
             get_next_card: function() {
                 if (!this.is_eod()) {
                     return this.cards[this.current++];
