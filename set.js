@@ -210,7 +210,7 @@ var set = {
                 }).join("");
             },
             id() {
-                return this.encode(this.strcards(this.cards));
+                return this.encode(this.arr_string(this.cards));
             },
             shuffle: function() {
                 var self = this;
