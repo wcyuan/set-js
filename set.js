@@ -28,6 +28,10 @@ var set = {
 
     create: function() {
         var self = Object.create(this);
+        var init_id = window.location.hash;
+        if (init_id) {
+            init_id = init_id.substr(1);
+        }
         // Every card has 4 attributes
         self.NUM_ATTRS = 4;
         // Every attribute has 3 possible values
@@ -54,14 +58,19 @@ var set = {
         self.current_sets = [];
         self.is_find_all_mode = false;
         self.is_show_num_sets_mode = false;            
+
         self.setup_ui();
-        self.init_game();
+        self.init_game(init_id);
         return self;
     },
 
-    init_game: function() {
+    init_game: function(init_id) {
         var self = this;
-        self.cards.shuffle();
+        if (init_id) {
+            result = self.cards.set_cards(init_id);
+        } else {
+            self.cards.shuffle();
+        }
         self.shown = [];
         self.selected = [];
         self.hinted = [];
@@ -221,10 +230,15 @@ var set = {
                 return [is_success, arr];
             },
 
+            set_url: function() {
+                window.location.hash = this.id();
+            },
+
             set_cards: function(id) {
                 var result = this.id_to_array(id, this.cards.length);
                 if (result[0]) {
                     this.cards = result[1];
+                    this.set_url();
                 }
                 return result[0];
             },
@@ -253,6 +267,7 @@ var set = {
                     this.cards[swap] = temp;
                 }
                 this.current = 0;
+                this.set_url();
                 return this;
             },
 
