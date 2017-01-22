@@ -673,6 +673,7 @@ var set = {
         this.addEventListener(deal_button, "click", function(obj) {
             if (self.set_exists()) {
                 self.message("A set already exists!");
+                self.record_event("invalid-deal-attempt");
             } else {
                 var dealt = self.deal(self.shown.length + self.NUM_AT_A_TIME);
                 self.draw();
