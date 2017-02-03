@@ -123,7 +123,7 @@ var set = {
         }
     },
 
-    update_url_params: function() {
+    get_updated_url_params: function() {
         var params = {
             find_all: this.is_find_all_mode,
             current: this.cards.get_current(),
@@ -131,6 +131,13 @@ var set = {
             nshown: this.shown.length,
             id: this.cards.id(),
         };
+        return params;
+    },
+
+    update_url_params: function(params) {
+        if (!params) {
+            params = this.get_updated_url_params();
+        }
         window.location.hash = this.to_query_string(params);
     },
 
@@ -811,6 +818,16 @@ var set = {
             obj.target.value = "New Game";
             return self.init_game();
         });
+        var restart = document.getElementById("restart");
+        this.addEventListener(restart, "click", function (obj) {
+            var params = self.get_updated_url_params();
+            if (!self.is_find_all_mode) {
+                delete params.current;
+                delete params.shown;
+                delete params.nshown;
+            }
+            return self.init_game(params);
+        });
         var find_all = document.getElementById("find-all");
         this.addEventListener(find_all, "click", function (obj) {
             self.is_find_all_mode = !self.is_find_all_mode;
@@ -931,9 +948,9 @@ var set = {
     set_mode_button: function(is_find_all_mode) {
         var find_all = document.getElementById("find-all");
         if (is_find_all_mode) {
-            find_all.value = "Find All";
+            find_all.value = "Mode: Find All";
         } else {
-            find_all.value = "Normal";
+            find_all.value = "Mode: Normal";
         }
     },
 
