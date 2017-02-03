@@ -110,19 +110,26 @@ var set = {
 			return;
 		}
 		if (params.id) {
-            this.cards.set_cards(params.id);
+            this.cards.set_cards(params.id, params.current);
 		}
 		if ("find_all" in params) {
 			this.is_find_all_mode = params.find_all == "true";
         }
+		if (params.shown) {
+            var result = this.cards.encoder.id_to_array(params.shown, params.nshown);
+			if (result[0]) {
+			    this.shown = result[1];
+			}
+		}
     },
 
     update_url_params: function() {
 		var params = {
 			find_all: this.is_find_all_mode,
-			id: this.cards.id(),
-			nshown: this.shown.length,
+			current: this.cards.get_current(),
 			shown: this.cards.encoder.encode_array(this.shown),
+			nshown: this.shown.length,
+			id: this.cards.id(),
 		};
         window.location.hash = this.to_query_string(params);
     },
@@ -346,17 +353,24 @@ var set = {
             // This takes an id and actually sets cards to the resulting
             // deck from the id (if it's a valid id).  Returns true if the
             // cards were set, false otherwise.
-            set_cards: function(id) {
+            set_cards: function(id, current) {
                 var result = this.encoder.id_to_array(id, this.cards.length);
                 if (result[0]) {
                     this.cards = result[1];
                 }
+				if (current) {
+					this.current = current;
+				}
                 return result[0];
             },
 
             id: function() {
                 return this.encoder.encode_array(this.cards);
             },
+
+			get_current: function() {
+				return this.current;
+			},
 
             shuffle: function() {
                 var self = this;
