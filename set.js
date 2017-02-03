@@ -10,10 +10,7 @@ var set = {
     create: function() {
         var self = Object.create(this);
         // Try to get the game id from the url, if available
-        var init_id = window.location.hash;
-        if (init_id) {
-            init_id = init_id.substr(1);
-        }
+        var params = self.read_url_params();
         // Every card has 4 attributes
         self.NUM_ATTRS = 4;
         // Every attribute has 3 possible values
@@ -53,18 +50,16 @@ var set = {
         self.is_show_num_sets_mode = false;            
 
         self.setup_ui();
-        self.init_game(init_id);
+        self.init_game(params);
         return self;
     },
 
     // init_game is called for each new game
-    init_game: function(init_id) {
+    init_game: function(params) {
         var self = this;
-        if (init_id) {
-            result = self.cards.set_cards(init_id);
-        } else {
-            self.cards.shuffle();
-        }
+        self.cards.shuffle();
+        self.apply_url_params(params);
+        self.update_url_params();
         self.shown = [];
         self.selected = [];
         self.hinted = [];
@@ -75,6 +70,24 @@ var set = {
         self.draw();
         self.record_event("start");
         return self;
+    },
+
+    read_url_params: function() {
+        var init_id = window.location.hash;
+        if (init_id) {
+            init_id = init_id.substr(1);
+        }
+        return init_id;
+    },
+
+    apply_url_params: function(params) {
+        if (params) {
+            this.cards.set_cards(params);
+        }
+    },
+
+    update_url_params: function() {
+        window.location.hash = this.cards.id();
     },
 
     // self.times is an array of events.  Each event is just a string
@@ -279,11 +292,6 @@ var set = {
                 return [is_success, arr];
             },
 
-            // Sets the hash of the url according to the id of the deck
-            set_url: function() {
-                window.location.hash = this.id();
-            },
-
             // This takes an id and actually sets cards to the resulting
             // deck from the id (if it's a valid id).  Returns true if the
             // cards were set, false otherwise.
@@ -291,7 +299,6 @@ var set = {
                 var result = this.id_to_array(id, this.cards.length);
                 if (result[0]) {
                     this.cards = result[1];
-                    this.set_url();
                 }
                 return result[0];
             },
@@ -320,7 +327,6 @@ var set = {
                     this.cards[swap] = temp;
                 }
                 this.current = 0;
-                this.set_url();
                 return this;
             },
 
