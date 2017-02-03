@@ -58,36 +58,73 @@ var set = {
     init_game: function(params) {
         var self = this;
         self.cards.shuffle();
-        self.apply_url_params(params);
-        self.update_url_params();
         self.shown = [];
         self.selected = [];
         self.hinted = [];
         self.found = [];
         self.times = [];
         self.current_sets = [];
+        self.apply_url_params(params);
         self.deal();
         self.draw();
         self.record_event("start");
         return self;
     },
 
+	params_to_hash: function(pairs, map) {
+		if (!pairs) {
+			pairs = window.location.hash.substring(1).split("&");
+		}
+		if (!map) {
+			map = {};
+		}
+		var count = pairs.length;
+		for (i = 0; i < count; i++) {
+			var pair = pairs[i];
+			var kv = pair.split('=', 2);
+			map[kv[0]] = kv[1];
+		}
+		return map;
+	},
+
+	to_query_string: function(paramsAsMap) {
+		var query = '';
+		var obj = paramsAsMap;
+		for (var prop in obj) {
+			if (obj.hasOwnProperty(prop)) {
+				if (query.length > 0) {
+					query = query + '&';
+				}
+				query = query + prop + '=' + obj[prop];
+			}
+		}
+		return query;
+	},
+
     read_url_params: function() {
-        var init_id = window.location.hash;
-        if (init_id) {
-            init_id = init_id.substr(1);
-        }
-        return init_id;
+		return this.params_to_hash();
     },
 
     apply_url_params: function(params) {
-        if (params) {
-            this.cards.set_cards(params);
+		if (!params) {
+			return;
+		}
+		if (params.id) {
+            this.cards.set_cards(params.id);
+		}
+		if ("find_all" in params) {
+			this.is_find_all_mode = params.find_all == "true";
         }
     },
 
     update_url_params: function() {
-        window.location.hash = this.cards.id();
+		var params = {
+			find_all: this.is_find_all_mode,
+			id: this.cards.id(),
+			nshown: this.shown.length,
+			shown: this.cards.encoder.encode_array(this.shown),
+		};
+        window.location.hash = this.to_query_string(params);
     },
 
     // self.times is an array of events.  Each event is just a string
@@ -392,6 +429,7 @@ var set = {
         }
         // call set_exists once to set current_sets
         self.set_exists();
+		self.update_url_params();
         return dealt;
     },
 
@@ -762,15 +800,11 @@ var set = {
         var find_all = document.getElementById("find-all");
         this.addEventListener(find_all, "click", function (obj) {
             self.is_find_all_mode = !self.is_find_all_mode;
-            if (self.is_find_all_mode) {
-                obj.target.value = "Find All";
-            } else {
-                obj.target.value = "Normal";
-            }
             self.found = [];
             self.times = [];
             self.record_event("start");
             // self.init_game();
+			self.update_url_params();
             self.draw();
         });
         var num_sets = document.getElementById("num-sets");
@@ -880,6 +914,15 @@ var set = {
         }
     },
 
+	set_mode_button: function(is_find_all_mode) {
+        var find_all = document.getElementById("find-all");
+        if (is_find_all_mode) {
+            find_all.value = "Find All";
+        } else {
+            find_all.value = "Normal";
+        }
+	},
+
     render_selected: function(obj, is_selected, is_hinted) {
         if (is_selected) {
             // XXX not sure what the problem is with my CSS
@@ -920,6 +963,7 @@ var set = {
             is_game_over = self.cards.is_eod() && !self.set_exists();
         }
         self.set_new_game_button(is_game_over);
+		self.set_mode_button(self.is_find_all_mode);
         this.update_num_sets();
         this.draw_table("card-table", this.shown, this.on_select_card, this.selected, this.hinted);
         this.draw_table("past-sets-table", this.found, undefined, undefined, undefined, this.times);
