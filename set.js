@@ -71,66 +71,66 @@ var set = {
         return self;
     },
 
-	params_to_hash: function(pairs, map) {
-		if (!pairs) {
-			pairs = window.location.hash.substring(1).split("&");
-		}
-		if (!map) {
-			map = {};
-		}
-		var count = pairs.length;
-		for (i = 0; i < count; i++) {
-			var pair = pairs[i];
-			var kv = pair.split('=', 2);
-			map[kv[0]] = kv[1];
-		}
-		return map;
-	},
+    params_to_hash: function(pairs, map) {
+        if (!pairs) {
+            pairs = window.location.hash.substring(1).split("&");
+        }
+        if (!map) {
+            map = {};
+        }
+        var count = pairs.length;
+        for (i = 0; i < count; i++) {
+            var pair = pairs[i];
+            var kv = pair.split('=', 2);
+            map[kv[0]] = kv[1];
+        }
+        return map;
+    },
 
-	to_query_string: function(paramsAsMap) {
-		var query = '';
-		var obj = paramsAsMap;
-		for (var prop in obj) {
-			if (obj.hasOwnProperty(prop)) {
-				if (query.length > 0) {
-					query = query + '&';
-				}
-				query = query + prop + '=' + obj[prop];
-			}
-		}
-		return query;
-	},
+    to_query_string: function(paramsAsMap) {
+        var query = '';
+        var obj = paramsAsMap;
+        for (var prop in obj) {
+            if (obj.hasOwnProperty(prop)) {
+                if (query.length > 0) {
+                    query = query + '&';
+                }
+                query = query + prop + '=' + obj[prop];
+            }
+        }
+        return query;
+    },
 
     read_url_params: function() {
-		return this.params_to_hash();
+        return this.params_to_hash();
     },
 
     apply_url_params: function(params) {
-		if (!params) {
-			return;
-		}
-		if (params.id) {
-            this.cards.set_cards(params.id, params.current);
-		}
-		if ("find_all" in params) {
-			this.is_find_all_mode = params.find_all == "true";
+        if (!params) {
+            return;
         }
-		if (params.shown) {
+        if (params.id) {
+            this.cards.set_cards(params.id, params.current);
+        }
+        if ("find_all" in params) {
+            this.is_find_all_mode = params.find_all == "true";
+        }
+        if (params.shown) {
             var result = this.cards.encoder.id_to_array(params.shown, params.nshown);
-			if (result[0]) {
-			    this.shown = result[1];
-			}
-		}
+            if (result[0]) {
+                this.shown = result[1];
+            }
+        }
     },
 
     update_url_params: function() {
-		var params = {
-			find_all: this.is_find_all_mode,
-			current: this.cards.get_current(),
-			shown: this.cards.encoder.encode_array(this.shown),
-			nshown: this.shown.length,
-			id: this.cards.id(),
-		};
+        var params = {
+            find_all: this.is_find_all_mode,
+            current: this.cards.get_current(),
+            shown: this.cards.encoder.encode_array(this.shown),
+            nshown: this.shown.length,
+            id: this.cards.id(),
+        };
         window.location.hash = this.to_query_string(params);
     },
 
@@ -358,9 +358,9 @@ var set = {
                 if (result[0]) {
                     this.cards = result[1];
                 }
-				if (current) {
-					this.current = current;
-				}
+                if (current) {
+                    this.current = current;
+                }
                 return result[0];
             },
 
@@ -368,9 +368,9 @@ var set = {
                 return this.encoder.encode_array(this.cards);
             },
 
-			get_current: function() {
-				return this.current;
-			},
+            get_current: function() {
+                return this.current;
+            },
 
             shuffle: function() {
                 var self = this;
@@ -443,7 +443,7 @@ var set = {
         }
         // call set_exists once to set current_sets
         self.set_exists();
-		self.update_url_params();
+        self.update_url_params();
         return dealt;
     },
 
@@ -688,7 +688,7 @@ var set = {
             };
         }
         return [times[idx].datetime - times[idx-1].datetime, 
-                times[idx].datetime - times[prev].datetime]; 
+        times[idx].datetime - times[prev].datetime]; 
     },
 
     make_set_time_list: function(times) {
@@ -818,7 +818,7 @@ var set = {
             self.times = [];
             self.record_event("start");
             // self.init_game();
-			self.update_url_params();
+            self.update_url_params();
             self.draw();
         });
         var num_sets = document.getElementById("num-sets");
@@ -928,14 +928,14 @@ var set = {
         }
     },
 
-	set_mode_button: function(is_find_all_mode) {
+    set_mode_button: function(is_find_all_mode) {
         var find_all = document.getElementById("find-all");
         if (is_find_all_mode) {
             find_all.value = "Find All";
         } else {
             find_all.value = "Normal";
         }
-	},
+    },
 
     render_selected: function(obj, is_selected, is_hinted) {
         if (is_selected) {
@@ -971,13 +971,13 @@ var set = {
         var self = this;
         this.check_set();
         var is_game_over = false;
-	    if (self.is_find_all_mode) {
+        if (self.is_find_all_mode) {
             is_game_over = self.found.length == self.current_sets.length;
         } else {
             is_game_over = self.cards.is_eod() && !self.set_exists();
         }
         self.set_new_game_button(is_game_over);
-		self.set_mode_button(self.is_find_all_mode);
+        self.set_mode_button(self.is_find_all_mode);
         this.update_num_sets();
         this.draw_table("card-table", this.shown, this.on_select_card, this.selected, this.hinted);
         this.draw_table("past-sets-table", this.found, undefined, undefined, undefined, this.times);
