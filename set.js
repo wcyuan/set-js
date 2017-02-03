@@ -117,6 +117,177 @@ var set = {
     make_deck: function(num_cards) {
         var cards = {
 
+            encoder: {
+                alphabet: "abcdefghijklmnopqrstuvwxyz0123456789",
+                separator: "-",
+                chunk_size: 15,
+
+                // encode an int in the given alphabet.  Note, input should be
+                // a number, not a string
+                encode_int: function(input, alphabet) {
+                    if (!alphabet) {
+                        alphabet = self.alphabet;
+                    }
+                    var hash = "";
+                    var len = alphabet.length;
+                    while (input) {
+                        hash = alphabet[input % len] + hash;
+                        input = parseInt(input / len, 10);
+                    }
+                    return hash;
+                },
+
+                // splits a string into chunks of size len or less.  If the length of
+                // the string isn't a multiple of len, then the first chunk could
+                // be shorter than len, and the rest will be of size len exactly.
+                // It's important that the shorter chunk is the first one -- we rely
+                // on that fact when we decode, because we don't know how long the
+                // chunk should be, and we pad with leading zeros.  That's only safe to
+                // do with the first chunk, since adding leading zeros to the first chunk
+                // adds them to the left of the number, which doesn't change the number,
+                // whereas adding zeros to any other chunk would be adding zeros to the
+                // middle of the number, which obviously changes the number.
+                split_string(input, len) {
+                    if (!len) {
+                        len = this.chunk_size;
+                    }
+                    var retval = [];
+                    var last = 0;
+                    for (var next = input.length % len; last < input.length; last = next, next += len) {
+                        retval.push(input.substr(last, next - last));
+                    }
+                    return retval;
+                },
+
+                // this is a wrapper around encode_int: if the input int is really
+                // large, then encode_int will give overflow errors.  In that case,
+                // we first split up the int into chunks of length chunk_size (15 digits),
+                // encode each chunk, then join the encodings with the separator ("-")
+                // Note that the input int should be a string, not a number.
+                encode: function(input, separator, alphabet, chunk_size) {
+                    var self = this;
+                    if (!alphabet) {
+                        alphabet = self.alphabet;
+                    }
+                    if (!separator) {
+                        separator = self.separator;
+                    }
+                    if (!chunk_size) {
+                        chunk_size = self.chunk_size;
+                    }
+                    return self.split_string(input, chunk_size).map(function(elt) {
+                        return self.encode_int(elt, alphabet);
+                    }).join(separator);
+                },
+
+                // performs the inverse of the encode_int operation
+                decode_int: function(hash, alphabet) {
+                    var self = this;
+                    if (!alphabet) {
+                        alphabet = self.alphabet;
+                    }
+                    var output = 0;
+                    var alen = alphabet.length;
+                    var hlen = hash.length;
+                    for (var ii = 0; ii < hlen; ii++) {
+                        var ch = hash.charAt(ii);
+                        output *= alen;
+                        output += alphabet.indexOf(ch);
+                    }
+                    return output;
+                },
+
+                // create an array which is just elt repeated n times
+                repeat: function(elt, n_times) {
+                    var arr = [];
+                    for (var ii = 0; ii < n_times; ii++) {
+                        arr.push(elt);
+                    }
+                    return arr;
+                },
+
+                // pad the given string out to the given length, but adding
+                // the pad string to the left side.  The pad string is assumed
+                // to be a single character.
+                leftpad: function(string, len, pad) {
+                    return this.repeat(pad, len - (""+ string).length).join("") + string;
+                },
+
+                // decode is the inverse of encode.  It takes the encoded id,
+                // splits it on the separator ("-") to get chunks, then decodes
+                // each chunk.  If the resulting number if too small, it may
+                // need to pad that number with leading zeros.  Then it concatenates
+                // the decoded numbers together to get one bigint.  
+                // the process of encoding and decoding may add leading zeros to the bigint,
+                // but since it's an int, we assume leading zeros don't matter
+                decode(hash, separator, alphabet, chunk_size) {
+                    var self = this;
+                    if (!alphabet) {
+                        alphabet = self.alphabet;
+                    }
+                    if (!separator) {
+                        separator = self.separator;
+                    }
+                    if (!chunk_size) {
+                        chunk_size = self.chunk_size;
+                    }
+                    hash = hash.toLowerCase();
+                    return hash.split("-").map(function(elt) {
+                        var res = "" + self.decode_int(elt, alphabet);
+                        res = self.leftpad(res, chunk_size, "0");
+                        return res;
+                    }).join("");
+                },
+
+                arr_string: function(arr) {
+                    var self = this;
+                    var padsize = Math.floor(Math.log10(arr.length)) + 1;
+                    return arr.map(function(elt) {
+                        return self.leftpad(elt, padsize, "0");
+                    }).join("");
+                },
+
+                encode_array: function(arr) {
+                    return this.encode(this.arr_string(arr));
+                },
+
+                // This takes the string id, decodes it to get the concatenation of
+                // all the cards in the deck, and transforms that into a deck of cards.
+                // Along the way, it does some sanity checking that we didn't see
+                // the same card multiple times, and that the resulting array encodes
+                // to the same id that we were given.  
+                // Returns an array of [bool-whether-the-id-is-valid, resulting-array]
+                // It's up to the caller to actually set this.cards to the resulting
+                // array, this function by itself is non-mutating.
+                id_to_array: function(id, len) {
+                    if (!len) {
+                        len = this.cards.length;
+                    }
+                    var order = this.decode(id);
+                    var padsize = Math.floor(Math.log10(len)) + 1;
+                    order = order.substr(-padsize * len);
+                    var seen = {};
+                    var arr = [];
+                    var is_success = true;
+                    for (var ii = 0; ii < len; ii++) {
+                        arr[ii] = parseInt(order.substr(ii*padsize, padsize), 10);
+                        if (arr[ii] in seen) {
+                            console.log("ERROR: id " + id +
+                                    " results in malformed deck (same card multiple times: "
+                                    + arr[ii]);
+                            is_success = false;
+                        }
+                        seen[arr[ii]] = 1;
+                    }
+                    var new_id = this.encode(this.arr_string(arr));
+                    if (id != new_id) {
+                        console.log("ERROR: id " + id + " is decoded to the wrong thing " + new_id); 
+                        is_success = false;
+                    }
+                    return [is_success, arr];
+                },
+            }, // end encoder
+
             // the cards data structure is just a permutation of the cards, which
             // are the numbers from 0 to 80 (or whatever the deck size is)
             cards: [],
@@ -135,187 +306,19 @@ var set = {
                 return Math.floor(Math.random() * (max - min)) + min;
             },
 
-            alphabet: "abcdefghijklmnopqrstuvwxyz0123456789",
-            separator: "-",
-            chunk_size: 15,
-
-            // encode an int in the given alphabet.  Note, input should be
-            // a number, not a string
-            encode_int: function(input, alphabet) {
-                if (!alphabet) {
-                    alphabet = self.alphabet;
-                }
-                var hash = "";
-                var len = alphabet.length;
-                while (input) {
-                    hash = alphabet[input % len] + hash;
-                    input = parseInt(input / len, 10);
-                }
-                return hash;
-            },
-
-            // splits a string into chunks of size len or less.  If the length of
-            // the string isn't a multiple of len, then the first chunk could
-            // be shorter than len, and the rest will be of size len exactly.
-            // It's important that the shorter chunk is the first one -- we rely
-            // on that fact when we decode, because we don't know how long the
-            // chunk should be, and we pad with leading zeros.  That's only safe to
-            // do with the first chunk, since adding leading zeros to the first chunk
-            // adds them to the left of the number, which doesn't change the number,
-            // whereas adding zeros to any other chunk would be adding zeros to the
-            // middle of the number, which obviously changes the number.
-            split_string(input, len) {
-                if (!len) {
-                    len = this.chunk_size;
-                }
-                var retval = [];
-                var last = 0;
-                for (var next = input.length % len; last < input.length; last = next, next += len) {
-                    retval.push(input.substr(last, next - last));
-                }
-                return retval;
-            },
-
-            // this is a wrapper around encode_int: if the input int is really
-            // large, then encode_int will give overflow errors.  In that case,
-            // we first split up the int into chunks of length chunk_size (15 digits),
-            // encode each chunk, then join the encodings with the separator ("-")
-            // Note that the input int should be a string, not a number.
-            encode: function(input, separator, alphabet, chunk_size) {
-                var self = this;
-                if (!alphabet) {
-                    alphabet = self.alphabet;
-                }
-                if (!separator) {
-                    separator = self.separator;
-                }
-                if (!chunk_size) {
-                    chunk_size = self.chunk_size;
-                }
-                return self.split_string(input, chunk_size).map(function(elt) {
-                    return self.encode_int(elt, alphabet);
-                }).join(separator);
-            },
-
-            // performs the inverse of the encode_int operation
-            decode_int: function(hash, alphabet) {
-                var self = this;
-                if (!alphabet) {
-                    alphabet = self.alphabet;
-                }
-                var output = 0;
-                var alen = alphabet.length;
-                var hlen = hash.length;
-                for (var ii = 0; ii < hlen; ii++) {
-                    var ch = hash.charAt(ii);
-                    output *= alen;
-                    output += alphabet.indexOf(ch);
-                }
-                return output;
-            },
-
-            // create an array which is just elt repeated n times
-            repeat: function(elt, n_times) {
-                var arr = [];
-                for (var ii = 0; ii < n_times; ii++) {
-                    arr.push(elt);
-                }
-                return arr;
-            },
-
-            // pad the given string out to the given length, but adding
-            // the pad string to the left side.  The pad string is assumed
-            // to be a single character.
-            leftpad: function(string, len, pad) {
-                return this.repeat(pad, len - (""+ string).length).join("") + string;
-            },
-
-            // decode is the inverse of encode.  It takes the encoded id,
-            // splits it on the separator ("-") to get chunks, then decodes
-            // each chunk.  If the resulting number if too small, it may
-            // need to pad that number with leading zeros.  Then it concatenates
-            // the decoded numbers together to get one bigint.  
-            // the process of encoding and decoding may add leading zeros to the bigint,
-            // but since it's an int, we assume leading zeros don't matter
-            decode(hash, separator, alphabet, chunk_size) {
-                var self = this;
-                if (!alphabet) {
-                    alphabet = self.alphabet;
-                }
-                if (!separator) {
-                    separator = self.separator;
-                }
-                if (!chunk_size) {
-                    chunk_size = self.chunk_size;
-                }
-                hash = hash.toLowerCase();
-                return hash.split("-").map(function(elt) {
-                    var res = "" + self.decode_int(elt, alphabet);
-                    res = self.leftpad(res, chunk_size, "0");
-                    return res;
-                }).join("");
-            },
-
-            // This takes the string id, decodes it to get the concatenation of
-            // all the cards in the deck, and transforms that into a deck of cards.
-            // Along the way, it does some sanity checking that we didn't see
-            // the same card multiple times, and that the resulting array encodes
-            // to the same id that we were given.  
-            // Returns an array of [bool-whether-the-id-is-valid, resulting-array]
-            // It's up to the caller to actually set this.cards to the resulting
-            // array, this function by itself is non-mutating.
-            id_to_array: function(id, len) {
-                if (!len) {
-                    len = this.cards.length;
-                }
-                var order = this.decode(id);
-                var padsize = Math.floor(Math.log10(len)) + 1;
-                order = order.substr(-padsize * len);
-                var seen = {};
-                var arr = [];
-                var is_success = true;
-                for (var ii = 0; ii < len; ii++) {
-                    arr[ii] = parseInt(order.substr(ii*padsize, padsize), 10);
-                    if (arr[ii] in seen) {
-                        console.log("ERROR: id " + id +
-                                " results in malformed deck (same card multiple times: "
-                                + arr[ii]);
-                        is_success = false;
-                    }
-                    seen[arr[ii]] = 1;
-                }
-                var new_id = this.encode(this.arr_string(arr));
-                if (id != new_id) {
-                    console.log("ERROR: id " + id + " is decoded to the wrong thing " + new_id); 
-                    is_success = false;
-                }
-                return [is_success, arr];
-            },
-
             // This takes an id and actually sets cards to the resulting
             // deck from the id (if it's a valid id).  Returns true if the
             // cards were set, false otherwise.
             set_cards: function(id) {
-                var result = this.id_to_array(id, this.cards.length);
+                var result = this.encoder.id_to_array(id, this.cards.length);
                 if (result[0]) {
                     this.cards = result[1];
                 }
                 return result[0];
             },
 
-            arr_string: function(arr) {
-                var self = this;
-                if (!arr) {
-                    arr = self.cards;
-                }
-                var padsize = Math.floor(Math.log10(arr.length)) + 1;
-                return arr.map(function(elt) {
-                    return self.leftpad(elt, padsize, "0");
-                }).join("");
-            },
-
             id: function() {
-                return this.encode(this.arr_string(this.cards));
+                return this.encoder.encode_array(this.cards);
             },
 
             shuffle: function() {
@@ -355,7 +358,7 @@ var set = {
             var allsame = true;
             var alldifferent = true;
             var vals = [];
-            var possibles = this.cards.repeat(false, this.NUM_VALUES);
+            var possibles = this.cards.encoder.repeat(false, this.NUM_VALUES);
             for (var jj = 0; jj < this.NUM_VALUES; jj++) {
                 vals[jj] = Math.floor((cards[jj] % (mask * this.NUM_VALUES)) / mask);
                 if (possibles[vals[jj]]) {
