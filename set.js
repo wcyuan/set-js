@@ -145,8 +145,11 @@ var set = {
     // description of the event (should essentially be an enum), plus
     // a timestamp.  If the event is that a set was found, then we
     // also record the number of sets that were found.
-    record_event: function(description, num_sets) {
-        this.times.push({description: description, datetime: new Date()});
+    record_event: function(description, num_sets, url) {
+        if (!url) {
+            url = window.location.href;
+        }
+        this.times.push({description: description, datetime: new Date(), url: url});
         if (num_sets) {
             this.times[this.times.length - 1].num_sets = num_sets;
         }
@@ -657,6 +660,14 @@ var set = {
         if ("num_sets" in times[idx]) {
             td.innerHTML = "(" + times[idx].num_sets + " sets)";
         }
+        var td = document.createElement("TD");
+        tr.appendChild(td);
+        if ("url" in times[idx]) {
+            var href = document.createElement("A");
+            href.href = times[idx].url;
+            href.innerHTML = "link";
+            td.appendChild(href);
+        }
     },
 
     add_events: function(times, idx, tr, table) {
@@ -845,6 +856,7 @@ var set = {
         });
         var deal_button = document.getElementById("deal");
         this.addEventListener(deal_button, "click", function(obj) {
+            var url = window.location.href;
             if (self.set_exists()) {
                 self.message("A set already exists!");
                 self.record_event("invalid-deal-attempt");
@@ -852,19 +864,20 @@ var set = {
                 var dealt = self.deal(self.shown.length + self.NUM_AT_A_TIME);
                 self.draw();
                 if (dealt) {
-                    self.record_event("no-sets-exist");
+                    self.record_event("no-sets-exist", null, url);
                 }
             }
         });
         var auto_button = document.getElementById("auto");
         this.addEventListener(auto_button, "click", function(obj) {
+            var url = window.location.href;
             self.clear_selected();
             selected_pictures = self.find_a_set();
             if (selected_pictures.length == 0) {
                 var dealt = self.deal(self.shown.length + self.NUM_AT_A_TIME);
                 self.draw();
                 if (dealt) {
-                    self.record_event("no-sets-exist");
+                    self.record_event("no-sets-exist", null, url);
                 }
             }
             for (var ii = 0; ii < selected_pictures.length; ii++) {
