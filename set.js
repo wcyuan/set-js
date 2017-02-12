@@ -21,6 +21,8 @@ var set = {
         self.NUM_AT_A_TIME = 3;
         // Number of cards in a row
         self.NUM_CARDS_PER_ROW = 3;
+        // Whether to update url params every turn
+        self.DO_URL_UPDATE = true;
         self.num_cards = Math.pow(self.NUM_VALUES, self.NUM_ATTRS);
         self.images = self.load_images();
         self.cards = self.make_deck(self.num_cards);
@@ -51,6 +53,16 @@ var set = {
 
         self.setup_ui();
         self.init_game(params);
+        window.onhashchange = function() {
+            var params = self.read_url_params();
+            if (self.DO_URL_UPDATE) {
+                self.apply_url_params(params);
+                self.deal();
+                self.draw();
+            } else {
+                self.init_game(params);
+            }
+        };
         return self;
     },
 
@@ -134,11 +146,20 @@ var set = {
         return params;
     },
 
-    update_url_params: function(params) {
+    get_location: function(params) {
         if (!params) {
             params = this.get_updated_url_params();
         }
-        window.location.hash = this.to_query_string(params);
+        var anchor = document.createElement("A");
+        anchor.href = window.location.href;
+        anchor.hash = this.to_query_string(params);
+        return anchor;
+    },
+
+    update_url_params: function(params) {
+        if (this.DO_URL_UPDATE) {
+            window.location.hash = this.get_location(params).hash;
+        }
     },
 
     // self.times is an array of events.  Each event is just a string
@@ -147,13 +168,22 @@ var set = {
     // also record the number of sets that were found.
     record_event: function(description, num_sets, url) {
         if (!url) {
-            url = window.location.href;
+            url = this.get_location().href;
         }
         this.times.push({description: description, datetime: new Date(), url: url});
         if (num_sets) {
             this.times[this.times.length - 1].num_sets = num_sets;
         }
         return self;
+    },
+
+    // this.last_url is a record of the url after the last time check_set
+    // was called.  The idea is that if you are looking at past sets, you
+    // have links to the state before each event, but you don't have a link
+    // to the state after the last event.  So that's what this link is
+    // supposed to be.
+    set_last_url: function() {
+        this.last_url = this.get_location().href;
     },
 
     // Make_deck returns the deck of cards.  The deck includes not only the
@@ -609,6 +639,7 @@ var set = {
         }
         self.message(msg);
         self.deal();
+        self.set_last_url();
         self.update_num_sets();
     },
 
@@ -647,42 +678,51 @@ var set = {
         return retval;
     },
 
+    add_child_element: function(par, type) {
+        var elt = document.createElement(type);
+        par.appendChild(elt);
+        return elt;
+    },
+
     add_time_col: function(times, idx, tr) {
-        var td = document.createElement("TD");
-        tr.appendChild(td);
+        var td = this.add_child_element(tr, "TD");
         var this_times = this.get_set_time(times, idx);
         td.innerHTML = this.format_time(this_times[0]);
-        var td = document.createElement("TD");
-        tr.appendChild(td);
+        td = this.add_child_element(tr, "TD");
         td.innerHTML = this.format_time(this_times[1]);
-        var td = document.createElement("TD");
-        tr.appendChild(td);
+        td = this.add_child_element(tr, "TD");
         if ("num_sets" in times[idx]) {
             td.innerHTML = "(" + times[idx].num_sets + " sets)";
         }
-        var td = document.createElement("TD");
-        tr.appendChild(td);
+        td = this.add_child_element(tr, "TD");
         if ("url" in times[idx]) {
-            var href = document.createElement("A");
+            var href = this.add_child_element(td, "A");
             href.href = times[idx].url;
-            href.innerHTML = "link";
-            td.appendChild(href);
+            href.innerHTML = "restore";
         }
     },
 
     add_events: function(times, idx, tr, table) {
         var self = this;
         while (times && idx < times.length && times[idx].description != "set") {
-            var td = document.createElement("TD");
-            tr.appendChild(td);
+            var td = this.add_child_element(tr, "TD");
             td.innerHTML = times[idx].description + " - " + times[idx].datetime;
             td.colSpan = self.NUM_CARDS_PER_ROW;
             self.add_time_col(times, idx, tr);
             idx++;
-            tr = document.createElement("TR");
-            table.appendChild(tr);
+            tr = this.add_child_element(table, "TR");
         }
         return [tr, idx];
+    },
+
+    add_last_url: function(table) {
+        if (this.last_url) {
+            var tr = this.add_child_element(table, "TR");
+            var td = this.add_child_element(tr, "TD");
+            var href = this.add_child_element(td, "A");
+            href.href = this.last_url;
+            href.innerHTML = "restore";
+        }
     },
 
     // for a given set in the times array, return the
@@ -747,21 +787,18 @@ var set = {
         remove_children(table);
         // create a new table
         var time_idx = 0;
-        var tr = document.createElement("TR");
-        table.appendChild(tr);
+        var tr = self.add_child_element(table, "TR");
         if (times) {
             var set_times = self.make_set_time_list(times);
             if (set_times.length > 0) {
                 var stats = self.get_arr_stats(set_times);
-                var td = document.createElement("TD");
-                tr.appendChild(td);
+                var td = self.add_child_element(tr, "TD");
                 td.colSpan = self.NUM_CARDS_PER_ROW;
                 td.innerHTML = 
                     ["median", "average", "max", "min"].map(function(elt) {
                         return elt + ": " + self.format_time(stats[elt]);
                     }).join("<br>");
-                tr = document.createElement("TR");
-                table.appendChild(tr);
+                tr = self.add_child_element(table, "TR");
             }
         }
         for (var ii = 0; ii < arr.length; ii++) {
@@ -770,10 +807,8 @@ var set = {
             var info = self.add_events(times, time_idx, tr, table);
             tr = info[0];
             time_idx = info[1];
-            var td = document.createElement("TD");
-            tr.appendChild(td);
-            img = document.createElement("IMG");
-            td.appendChild(img);
+            var td = self.add_child_element(tr, "TD");
+            var img = self.add_child_element(td, "IMG");
             td.attributes["pic_id"] = arr[ii];
             this.render_selected(td, selected && selected[arr[ii]], hinted && hinted[arr[ii]]);
             img.src = this.images[arr[ii]].src;
@@ -785,11 +820,13 @@ var set = {
                     self.add_time_col(times, time_idx, tr);
                     time_idx++;
                 }
-                tr = document.createElement("TR");
-                table.appendChild(tr);
+                tr = self.add_child_element(table, "TR");
             }
         }
         self.add_events(times, time_idx, tr, table);
+        if (times) {
+            self.add_last_url(table);
+        }
     },
 
     set_toggle_display: function(button_id, div_id) {
@@ -856,7 +893,7 @@ var set = {
         });
         var deal_button = document.getElementById("deal");
         this.addEventListener(deal_button, "click", function(obj) {
-            var url = window.location.href;
+            var url = self.get_location().href;
             if (self.set_exists()) {
                 self.message("A set already exists!");
                 self.record_event("invalid-deal-attempt");
@@ -870,7 +907,7 @@ var set = {
         });
         var auto_button = document.getElementById("auto");
         this.addEventListener(auto_button, "click", function(obj) {
-            var url = window.location.href;
+            var url = self.get_location().href;
             self.clear_selected();
             selected_pictures = self.find_a_set();
             if (selected_pictures.length == 0) {
