@@ -54,6 +54,11 @@ var set = {
         self.setup_ui();
         self.init_game(params);
         window.onhashchange = function() {
+            if (self.get_location().hash == window.location.hash) {
+                // don't re-draw if not necessary.  That way, if the window
+                // is showing a message, the message won't be reset or erased.
+                return;
+            }
             var params = self.read_url_params();
             if (self.DO_URL_UPDATE) {
                 self.apply_url_params(params);
